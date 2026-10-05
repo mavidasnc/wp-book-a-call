@@ -5,7 +5,7 @@
  * @package Mavida\BookACall
  */
 
-define( 'WPBAC_VERSION', '0.4.0' );
+define( 'WPBAC_VERSION', '0.4.1' );
 define( 'WPBAC_PLUGIN_FILE', '' );
 define( 'WPBAC_PLUGIN_DIR', '' );
 define( 'WPBAC_PLUGIN_URL', '' );
