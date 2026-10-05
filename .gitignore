@@ -1,0 +1,51 @@
+# Dipendenze
+/node_modules/
+/vendor/
+
+# Build artifacts
+/build/
+/dist/
+*.min.js
+*.min.css
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# wp-env
+.wp-env.override.json
+
+# IDE / Editor
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Log
+*.log
+/logs/
+
+# PHPUnit
+.phpunit.result.cache
+/coverage/
+
+# PHPCS
+.phpcs-cache
+
+# Composer
+composer.phar
+
+# Plugin packaging
+/wp-book-a-call.zip
+/zip/
+
+.phpunit.cache/

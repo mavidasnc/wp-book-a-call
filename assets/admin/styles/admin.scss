@@ -1,0 +1,59 @@
+.wpbac-admin {
+	max-width: 960px;
+
+	&__panel {
+		padding: 16px 0;
+	}
+
+	&__row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+
+		> * {
+			flex: 1 1 160px;
+		}
+	}
+
+	&__table {
+		width: 100%;
+		border-collapse: collapse;
+		background: #fff;
+
+		th,
+		td {
+			padding: 8px 12px;
+			border-bottom: 1px solid #dcdcde;
+			text-align: left;
+			vertical-align: top;
+		}
+	}
+
+	&__card {
+		margin-bottom: 16px;
+		padding: 16px;
+		border: 1px solid #dcdcde;
+		background: #fff;
+	}
+
+	&__hours {
+		display: grid;
+		grid-template-columns: 56px 1fr;
+		gap: 8px 12px;
+		align-items: start;
+		margin-bottom: 16px;
+	}
+
+	&__range {
+		display: flex;
+		gap: 8px;
+		align-items: flex-end;
+		margin-bottom: 8px;
+	}
+
+	&__actions {
+		display: flex;
+		gap: 8px;
+		margin-top: 16px;
+	}
+}

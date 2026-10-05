@@ -1,0 +1,238 @@
+.wp-block-wpbac-booking {
+	--wpbac-accent: var(--wp--preset--color--primary, #1d4ed8);
+	--wpbac-border: color-mix(in srgb, currentcolor 20%, transparent);
+	--wpbac-muted: color-mix(in srgb, currentcolor 60%, transparent);
+
+	max-width: 100%;
+}
+
+.wpbac-booking {
+	&__card {
+		display: grid;
+		grid-template-columns: 1fr;
+		border: 1px solid var(--wpbac-border);
+		border-radius: 12px;
+		overflow: hidden;
+
+		@media (min-width: 760px) {
+			grid-template-columns: 280px 1fr;
+		}
+	}
+
+	&__info {
+		padding: 24px;
+		border-bottom: 1px solid var(--wpbac-border);
+
+		@media (min-width: 760px) {
+			border-right: 1px solid var(--wpbac-border);
+			border-bottom: 0;
+		}
+	}
+
+	&__main {
+		padding: 24px;
+		min-width: 0;
+	}
+
+	&__host,
+	&__duration,
+	&__hint {
+		margin: 0 0 8px;
+		color: var(--wpbac-muted);
+	}
+
+	&__title {
+		margin: 0 0 8px;
+		font-size: 1.4em;
+	}
+
+	&__tz {
+		display: block;
+		margin-top: 16px;
+		font-size: 0.85em;
+
+		select {
+			display: block;
+			width: 100%;
+			margin-top: 4px;
+		}
+	}
+
+	&__picker {
+		display: grid;
+		gap: 24px;
+
+		@media (min-width: 560px) {
+			grid-template-columns: minmax(260px, 1fr) minmax(140px, 200px);
+		}
+	}
+
+	&__calendar {
+		max-width: 380px;
+	}
+
+	&__month {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 12px;
+		text-transform: capitalize;
+
+		button {
+			width: 36px;
+			height: 36px;
+			border: 1px solid var(--wpbac-border);
+			border-radius: 50%;
+			background: transparent;
+			color: inherit;
+			font-size: 1.2em;
+			cursor: pointer;
+
+			&:disabled {
+				opacity: 0.3;
+				cursor: default;
+			}
+		}
+	}
+
+	&__grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 4px;
+	}
+
+	&__weekday {
+		text-align: center;
+		font-size: 0.8em;
+		font-weight: 600;
+		color: currentcolor;
+		opacity: 0.7;
+	}
+
+	&__day {
+		padding: 0;
+		aspect-ratio: 1;
+		border: 0;
+		border-radius: 50%;
+		background: transparent;
+		color: var(--wpbac-muted);
+		font: inherit;
+		font-size: 0.9em;
+
+		&.is-available {
+			background: color-mix(in srgb, var(--wpbac-accent) 12%, transparent);
+			color: var(--wpbac-accent);
+			font-weight: 600;
+			cursor: pointer;
+
+			&:hover,
+			&:focus-visible {
+				background: color-mix(in srgb, var(--wpbac-accent) 25%, transparent);
+			}
+		}
+
+		&.is-selected,
+		&.is-selected:hover,
+		&.is-selected:focus {
+			background: var(--wpbac-accent);
+			color: #fff;
+		}
+	}
+
+	&__slot-list {
+		display: grid;
+		gap: 8px;
+		margin-top: 12px;
+		max-height: 320px;
+		overflow-y: auto;
+	}
+
+	&__slot,
+	&__primary,
+	&__secondary {
+		padding: 10px 16px;
+		border: 1px solid var(--wpbac-accent);
+		border-radius: 6px;
+		background: transparent;
+		color: var(--wpbac-accent);
+		font: inherit;
+		text-align: center;
+		text-decoration: none;
+		cursor: pointer;
+
+		&:hover,
+		&:focus-visible {
+			background: var(--wpbac-accent);
+			color: #fff;
+		}
+	}
+
+	&__primary {
+		background: var(--wpbac-accent);
+		color: #fff;
+
+		&:disabled {
+			opacity: 0.6;
+			cursor: default;
+		}
+	}
+
+	&__secondary {
+		border-color: var(--wpbac-border);
+		color: inherit;
+	}
+
+	&__form {
+		display: grid;
+		gap: 16px;
+		max-width: 520px;
+
+		label {
+			display: grid;
+			gap: 4px;
+		}
+
+		input[type="text"],
+		input[type="email"],
+		textarea {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid var(--wpbac-border);
+			border-radius: 6px;
+			background: transparent;
+			color: inherit;
+			font: inherit;
+		}
+	}
+
+	&__check {
+		display: flex !important;
+		align-items: flex-start;
+		gap: 8px;
+	}
+
+	// Honeypot fuori schermo (non display:none, che alcuni bot riconoscono).
+	&__hp {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+	}
+
+	&__buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 8px;
+	}
+
+	&__error {
+		margin: 0;
+		color: #b32d2e;
+	}
+
+	&__when {
+		margin: 0 0 16px;
+	}
+}

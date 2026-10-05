@@ -1,0 +1,49 @@
+import { createRoot, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
+import { TabPanel } from '@wordpress/components';
+import Bookings from './pages/Bookings';
+import EventTypes from './pages/EventTypes';
+import Exceptions from './pages/Exceptions';
+import Settings from './pages/Settings';
+import './styles/admin.scss';
+
+const TABS = [
+	{ name: 'bookings', title: __( 'Prenotazioni', 'wp-book-a-call' ) },
+	{ name: 'types', title: __( 'Tipi di call', 'wp-book-a-call' ) },
+	{ name: 'exceptions', title: __( 'Eccezioni', 'wp-book-a-call' ) },
+	{ name: 'settings', title: __( 'Impostazioni', 'wp-book-a-call' ) },
+];
+
+function App() {
+	// Dopo il ritorno da Google si riapre direttamente la scheda Impostazioni.
+	const [ initial ] = useState(
+		new URLSearchParams( window.location.search ).has( 'wpbac_google' )
+			? 'settings'
+			: 'bookings'
+	);
+
+	return (
+		<div className="wpbac-admin">
+			<h1>{ __( 'Book a Call', 'wp-book-a-call' ) }</h1>
+			<TabPanel tabs={ TABS } initialTabName={ initial }>
+				{ ( tab ) => {
+					switch ( tab.name ) {
+						case 'types':
+							return <EventTypes />;
+						case 'exceptions':
+							return <Exceptions />;
+						case 'settings':
+							return <Settings />;
+						default:
+							return <Bookings />;
+					}
+				} }
+			</TabPanel>
+		</div>
+	);
+}
+
+const container = document.getElementById( 'wpbac-admin-root' );
+if ( container ) {
+	createRoot( container ).render( <App /> );
+}

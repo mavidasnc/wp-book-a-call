@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "wpbac/booking",
+  "title": "Book a Call",
+  "category": "widgets",
+  "icon": "calendar-alt",
+  "description": "Modulo di prenotazione per call conoscitive.",
+  "textdomain": "wp-book-a-call",
+  "attributes": {
+    "eventTypeSlug": { "type": "string", "default": "" },
+    "showHostInfo": { "type": "boolean", "default": true },
+    "showTimezoneSelector": { "type": "boolean", "default": true }
+  },
+  "supports": {
+    "html": false,
+    "align": [ "wide", "full" ],
+    "color": { "background": true, "text": true },
+    "spacing": { "padding": true, "margin": true }
+  },
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css",
+  "viewScript": "file:./view.js",
+  "render": "file:./render.php"
+}
