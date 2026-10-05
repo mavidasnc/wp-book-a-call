@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0]
+
+- Frontend: gli orari già occupati restano visibili ma non selezionabili, con un lucchetto; un giorno con tutti gli orari occupati resta cliccabile e li mostra tutti.
+- Limiti: nuova opzione per non accettare prenotazioni per il primo giorno operativo successivo a oggi (salta weekend e festività).
+- Chiusura automatica nelle festività italiane (Pasqua e Lunedì dell'Angelo incluse), visibili nel calendario delle Eccezioni.
+- Prenotazioni (admin): pulsante "Sposta" per cambiare giorno e orario con avviso via email al cliente; l'annullamento ora dice se il cliente è stato avvisato.
+- Admin: nuova scheda Notifiche (email e webhook); la scheda Impostazioni contiene limiti, Google Calendar e privacy; tolto il limite di larghezza della pagina.
+
 ## [0.5.0]
 
 - Correzione: lo stile dell'admin (card, calendario delle eccezioni, tabelle, spaziature) non veniva caricato; ora il CSS del plugin è agganciato alla pagina.

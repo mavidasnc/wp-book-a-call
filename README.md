@@ -48,6 +48,10 @@ Menu **Book a Call** nell'admin:
 
 Il refresh token è salvato cifrato (libsodium, chiave derivata dai salt di WordPress).
 
+### Festività e giorno successivo
+
+In Impostazioni > Limiti e chiusure: **chiusura automatica nelle festività italiane** (attiva di default) e, a scelta, **nessuna prenotazione per il primo giorno operativo successivo a oggi** (weekend e festività non contano). Gli altri giorni di chiusura si bloccano dalla scheda Eccezioni.
+
 ### Mittente delle email
 
 In Impostazioni > Notifiche si può indicare l'**email del mittente**; se è vuota si usa l'email di amministrazione del sito. Il nome del mittente è quello dell'organizzatore. Le altre email di WordPress non sono toccate. Perché le email non finiscano in spam, l'indirizzo deve appartenere a un dominio abilitato a spedire dal server (SPF/DKIM).

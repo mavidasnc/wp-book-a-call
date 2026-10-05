@@ -150,6 +150,67 @@
 		}
 	}
 
+	// Giorno con orari previsti ma tutti occupati: cliccabile, aspetto "spento".
+	&__day.is-full {
+		background: color-mix(in srgb, currentcolor 8%, transparent);
+		color: var(--wpbac-muted);
+		text-decoration: line-through;
+		cursor: pointer;
+
+		&:hover,
+		&:focus-visible {
+			background: color-mix(in srgb, currentcolor 14%, transparent);
+		}
+
+		&.is-selected,
+		&.is-selected:hover {
+			background: var(--wpbac-muted);
+			color: #fff;
+		}
+	}
+
+	// Orario già occupato: visibile ma non selezionabile, con il lucchetto.
+	&__slot.is-taken {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		border-color: var(--wpbac-border);
+		background: transparent;
+		color: var(--wpbac-muted);
+		text-decoration: line-through;
+		cursor: not-allowed;
+
+		&:hover,
+		&:focus-visible {
+			background: transparent;
+			color: var(--wpbac-muted);
+		}
+	}
+
+	&__lock {
+		flex: none;
+	}
+
+	&__legend {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: 12px 0 0;
+		color: var(--wpbac-muted);
+		font-size: 0.8em;
+	}
+
+	// Testo solo per gli screen reader.
+	&__sr {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
 	&__slots-title {
 		display: block;
 		margin-bottom: 12px;

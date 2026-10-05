@@ -112,6 +112,38 @@ final class SlotGeneratorTest extends TestCase {
 		$this->assertSame( array( '09:00', '10:00', '11:00' ), $this->day( $et, '2026-10-05' ) );
 	}
 
+	public function test_booked_slot_is_reported_as_taken_not_available(): void {
+		$busy  = array( array( $this->ts( '2026-10-05 10:00' ), $this->ts( '2026-10-05 10:30' ) ) );
+		$taken = array();
+		$slots = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), $busy, array(), $this->ts( '2026-01-01 00:00' ), $this->tz, array(), 0, $taken );
+		$this->assertNotContains( $this->ts( '2026-10-05 10:00' ), $slots );
+		$this->assertSame( array( $this->ts( '2026-10-05 10:00' ) ), $taken );
+		$this->assertCount( 5, $slots );
+	}
+
+	public function test_full_day_reports_every_slot_as_taken(): void {
+		$taken = array();
+		$slots = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), array(), array(), $this->ts( '2026-01-01 00:00' ), $this->tz, array( '2026-10-05' => 2 ), 2, $taken );
+		$this->assertSame( array(), $slots );
+		$this->assertCount( 6, $taken );
+	}
+
+	public function test_closed_day_has_neither_available_nor_taken(): void {
+		$taken      = array();
+		$exceptions = array( array( 'date_from' => '2026-10-05', 'date_to' => '2026-10-05' ) );
+		$busy       = array( array( $this->ts( '2026-10-05 10:00' ), $this->ts( '2026-10-05 10:30' ) ) );
+		$slots      = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), $busy, $exceptions, $this->ts( '2026-01-01 00:00' ), $this->tz, array(), 0, $taken );
+		$this->assertSame( array(), $slots );
+		$this->assertSame( array(), $taken );
+	}
+
+	public function test_slots_too_soon_are_not_reported_as_taken(): void {
+		$taken = array();
+		$et    = $this->event_type( array( 'min_notice_hours' => 2 ) );
+		( new SlotGenerator() )->generate( $et, $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), array(), array(), $this->ts( '2026-10-05 08:30' ), $this->tz, array(), 0, $taken );
+		$this->assertSame( array(), $taken );
+	}
+
 	public function test_full_day_has_no_slots(): void {
 		$slots = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), array(), array(), $this->ts( '2026-01-01 00:00' ), $this->tz, array( '2026-10-05' => 2 ), 2 );
 		$this->assertSame( array(), $slots );

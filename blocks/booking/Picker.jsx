@@ -6,8 +6,17 @@ const pad = ( n ) => String( n ).padStart( 2, '0' );
 const WEEKDAYS = [ 'L', 'M', 'M', 'G', 'V', 'S', 'D' ];
 const keyOf = ( d ) => `${ d.getFullYear() }-${ pad( d.getMonth() + 1 ) }-${ pad( d.getDate() ) }`;
 
+/** Lucchetto: l'orario è già occupato. */
+function LockIcon() {
+	return (
+		<svg className="wpbac-booking__lock" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path fill="currentColor" d="M17 9V7a5 5 0 0 0-10 0v2H5v12h14V9h-2zM9 7a3 3 0 0 1 6 0v2H9V7zm4 9.7V18h-2v-1.3a2 2 0 1 1 2 0z" />
+		</svg>
+	);
+}
+
 /** Un singolo mese: titolo con frecce, giorni della settimana e griglia dei giorni. */
-function Month( { y, m, first, canPrev, byDay, day, onDay, onPrev, onNext } ) {
+function Month( { y, m, first, canPrev, byDay, takenByDay, day, onDay, onPrev, onNext } ) {
 	const title = new Intl.DateTimeFormat( 'it-IT', { month: 'long', year: 'numeric' } ).format(
 		new Date( y, m, 1 )
 	);
@@ -49,6 +58,8 @@ function Month( { y, m, first, canPrev, byDay, day, onDay, onPrev, onNext } ) {
 				{ Array.from( { length: days } ).map( ( _, i ) => {
 					const key = `${ y }-${ pad( m + 1 ) }-${ pad( i + 1 ) }`;
 					const available = !! byDay[ key ];
+					// Giorno con orari previsti ma tutti occupati: resta cliccabile per mostrarli.
+					const full = ! available && !! takenByDay[ key ];
 					return (
 						<button
 							type="button"
@@ -56,9 +67,11 @@ function Month( { y, m, first, canPrev, byDay, day, onDay, onPrev, onNext } ) {
 							className={
 								'wpbac-booking__day' +
 								( available ? ' is-available' : '' ) +
+								( full ? ' is-full' : '' ) +
 								( key === day ? ' is-selected' : '' )
 							}
-							disabled={ ! available }
+							disabled={ ! available && ! full }
+							title={ full ? __( 'Tutto occupato', 'wp-book-a-call' ) : undefined }
 							aria-pressed={ key === day }
 							onClick={ () => onDay( key ) }
 						>
@@ -79,6 +92,7 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 	const today = new Date();
 	const [ cursor, setCursor ] = useState( { y: today.getFullYear(), m: today.getMonth() } );
 	const [ slots, setSlots ] = useState( null );
+	const [ taken, setTaken ] = useState( [] );
 	const [ day, setDay ] = useState( '' );
 	const [ error, setError ] = useState( '' );
 
@@ -98,13 +112,23 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 	}, [ apiRoot, slug, cursor ] );
 
 	// Slot raggruppati per giorno nel fuso scelto dall'utente.
-	const byDay = useMemo( () => {
+	const group = ( list ) => {
 		const map = {};
-		( slots ?? [] ).forEach( ( ts ) => {
+		list.forEach( ( ts ) => {
 			( map[ dayKey( ts, tz ) ] ??= [] ).push( ts );
 		} );
 		return map;
-	}, [ slots, tz ] );
+	};
+	const byDay = useMemo( () => group( slots ?? [] ), [ slots, tz ] ); // eslint-disable-line react-hooks/exhaustive-deps
+	const takenByDay = useMemo( () => group( taken ), [ taken, tz ] ); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Orari del giorno scelto, liberi e occupati in ordine di ora.
+	const dayItems = day
+		? [
+				...( byDay[ day ] ?? [] ).map( ( ts ) => ( { ts, taken: false } ) ),
+				...( takenByDay[ day ] ?? [] ).map( ( ts ) => ( { ts, taken: true } ) ),
+		  ].sort( ( a, b ) => a.ts - b.ts )
+		: [];
 
 	const move = ( delta ) => {
 		setCursor( ( c ) => {
@@ -114,8 +138,8 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 	};
 
 	const canPrev = ! ( cursor.y === today.getFullYear() && cursor.m === today.getMonth() );
-	const monthProps = { byDay, day, onDay: setDay, onPrev: () => move( -1 ), onNext: () => move( 1 ) };
-	const hasSlots = Object.keys( byDay ).length > 0;
+	const monthProps = { byDay, takenByDay, day, onDay: setDay, onPrev: () => move( -1 ), onNext: () => move( 1 ) };
+	const hasSlots = Object.keys( byDay ).length > 0 || Object.keys( takenByDay ).length > 0;
 
 	return (
 		<div className="wpbac-booking__picker">
@@ -140,21 +164,40 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 			</div>
 
 			<div className="wpbac-booking__slots" aria-live="polite">
-				{ day && byDay[ day ] && (
+				{ dayItems.length > 0 && (
 					<>
-						<strong className="wpbac-booking__slots-title">{ fmtDate( byDay[ day ][ 0 ], tz ) }</strong>
+						<strong className="wpbac-booking__slots-title">{ fmtDate( dayItems[ 0 ].ts, tz ) }</strong>
 						<div className="wpbac-booking__slot-list">
-							{ byDay[ day ].map( ( ts ) => (
-								<button
-									type="button"
-									key={ ts }
-									className="wpbac-booking__slot"
-									onClick={ () => onSelect( ts ) }
-								>
-									{ fmtTime( ts, tz ) }
-								</button>
-							) ) }
+							{ dayItems.map( ( item ) =>
+								item.taken ? (
+									<button
+										type="button"
+										key={ item.ts }
+										className="wpbac-booking__slot is-taken"
+										disabled
+										title={ __( 'Già occupato', 'wp-book-a-call' ) }
+									>
+										<LockIcon />
+										{ fmtTime( item.ts, tz ) }
+										<span className="wpbac-booking__sr">{ __( 'occupato', 'wp-book-a-call' ) }</span>
+									</button>
+								) : (
+									<button
+										type="button"
+										key={ item.ts }
+										className="wpbac-booking__slot"
+										onClick={ () => onSelect( item.ts ) }
+									>
+										{ fmtTime( item.ts, tz ) }
+									</button>
+								)
+							) }
 						</div>
+						{ dayItems.some( ( item ) => item.taken ) && (
+							<p className="wpbac-booking__legend">
+								<LockIcon /> { __( 'Gli orari con il lucchetto sono già occupati.', 'wp-book-a-call' ) }
+							</p>
+						) }
 					</>
 				) }
 				{ ! day && hasSlots && (

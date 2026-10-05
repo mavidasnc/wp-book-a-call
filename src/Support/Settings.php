@@ -44,6 +44,8 @@ final class Settings {
 			'thanks_message'           => "Grazie per aver prenotato! Non vedo l'ora di sentirci.",
 			'max_per_day'              => 2,
 			'one_active_per_client'    => true,
+			'skip_next_day'            => false,
+			'close_holidays'           => true,
 			'reminder_24h'             => true,
 			'reminder_1h'              => false,
 			'webhook_url'              => '',

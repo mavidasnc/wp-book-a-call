@@ -23,7 +23,7 @@ const between = ( a, b ) => {
 	return out;
 };
 
-function Month( { y, m, blocked, inherited, booked, today, onDay, onPrev, onNext, first } ) {
+function Month( { y, m, blocked, inherited, booked, holidays, today, onDay, onPrev, onNext, first } ) {
 	const title = new Intl.DateTimeFormat( 'it-IT', { month: 'long', year: 'numeric' } ).format( new Date( y, m, 1 ) );
 	const offset = ( new Date( y, m, 1 ).getDay() + 6 ) % 7;
 	const count = new Date( y, m + 1, 0 ).getDate();
@@ -52,17 +52,19 @@ function Month( { y, m, blocked, inherited, booked, today, onDay, onPrev, onNext
 					const key = keyOf( y, m, i + 1 );
 					const past = key < today;
 					const isBlocked = blocked.has( key );
+					const holiday = holidays[ key ];
 					return (
 						<button
 							type="button"
 							key={ key }
-							disabled={ past || inherited.has( key ) }
+							disabled={ past || inherited.has( key ) || !! holiday }
 							aria-pressed={ isBlocked }
-							title={ inherited.has( key ) ? __( 'Bloccato per tutti i tipi di call', 'wp-book-a-call' ) : undefined }
+							title={ holiday ?? ( inherited.has( key ) ? __( 'Bloccato per tutti i tipi di call', 'wp-book-a-call' ) : undefined ) }
 							className={
 								'wpbac-admin__cal-day' +
 								( isBlocked ? ' is-blocked' : '' ) +
 								( inherited.has( key ) ? ' is-inherited' : '' ) +
+								( holiday ? ' is-holiday' : '' ) +
 								( booked.has( key ) ? ' has-booking' : '' ) +
 								( key === today ? ' is-today' : '' )
 							}
@@ -81,7 +83,7 @@ function Month( { y, m, blocked, inherited, booked, today, onDay, onPrev, onNext
  * Calendario a due mesi per bloccare i giorni. Clic = blocca/sblocca, shift+clic = intervallo.
  * onChange(dates, blocked) riceve le date da modificare e il nuovo stato.
  */
-export default function BlockCalendar( { blocked, inherited, booked, onChange } ) {
+export default function BlockCalendar( { blocked, inherited, booked, holidays = {}, onChange } ) {
 	const now = new Date();
 	const [ cursor, setCursor ] = useState( { y: now.getFullYear(), m: now.getMonth() } );
 	const [ anchor, setAnchor ] = useState( '' );
@@ -100,7 +102,7 @@ export default function BlockCalendar( { blocked, inherited, booked, onChange } 
 		setAnchor( key );
 	};
 
-	const shared = { blocked, inherited, booked, today, onDay, onPrev: () => move( -1 ), onNext: () => move( 1 ) };
+	const shared = { blocked, inherited, booked, holidays, today, onDay, onPrev: () => move( -1 ), onNext: () => move( 1 ) };
 
 	return (
 		<div>
@@ -111,6 +113,11 @@ export default function BlockCalendar( { blocked, inherited, booked, onChange } 
 			<p className="wpbac-admin__legend">
 				<span className="wpbac-admin__swatch is-blocked" /> { __( 'Bloccato', 'wp-book-a-call' ) }
 				<span className="wpbac-admin__swatch has-booking" /> { __( 'Ha prenotazioni', 'wp-book-a-call' ) }
+				{ Object.keys( holidays ).length > 0 && (
+					<>
+						<span className="wpbac-admin__swatch is-holiday" /> { __( 'Festività (chiuse in automatico)', 'wp-book-a-call' ) }
+					</>
+				) }
 				<span className="wpbac-admin__legend-hint">{ __( 'Clic per bloccare o sbloccare, Maiusc+clic per un intervallo.', 'wp-book-a-call' ) }</span>
 			</p>
 		</div>

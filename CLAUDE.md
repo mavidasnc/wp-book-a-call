@@ -44,3 +44,6 @@ Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tool
 - Privacy: `Privacy/PrivacyHandler` (exporter/eraser per email). L'eraser rilegge sempre la pagina 1 perché le righe anonimizzate non corrispondono più all'email.
 - Export CSV: `GET /admin/bookings/export` restituisce `{filename, csv}`; il download lo crea il browser (Blob). `Export/CsvBuilder` è pura e testata.
 - OAuth Google: il callback `admin-post.php?action=wpbac_google_callback` rimanda all'admin con `wpbac_google=ok|error&wpbac_reason=<codice>`; serve un client OAuth di tipo "Applicazione web" (un client "Desktop" accetta solo redirect su localhost).
+- Orari occupati: `SlotGenerator::generate()` raccoglie in `$taken` (parametro per riferimento) gli slot previsti ma bloccati; `AvailabilityService::slots_with_taken()` li espone e l'endpoint pubblico `/slots` risponde con `slots` e `taken`.
+- Giorni chiusi: `AvailabilityService::closed_days()` unisce eccezioni, `Availability/ItalianHolidays` (se `close_holidays`) e `Availability/NextOperativeDay` (se `skip_next_day`).
+- Spostamento dall'admin: `POST /admin/bookings/{id}/reschedule` usa `BookingService::reschedule()`, che manda le email e aggiorna Google; `GET /admin/bookings/{id}/slots` esclude la prenotazione stessa.

@@ -24,12 +24,14 @@ export default function Exceptions() {
 	const [ rows, setRows ] = useState( null );
 	const [ types, setTypes ] = useState( [] );
 	const [ booked, setBooked ] = useState( new Set() );
+	const [ holidays, setHolidays ] = useState( {} );
 	const [ scope, setScope ] = useState( 0 ); // 0 = tutti i tipi di call
 	const [ error, setError ] = useState( '' );
 
 	useEffect( () => {
 		api( '/admin/exceptions' ).then( setRows );
 		api( '/admin/event-types' ).then( setTypes );
+		api( '/admin/holidays' ).then( ( data ) => setHolidays( data.days ) );
 
 		// Giorni con prenotazioni confermate, mostrati nel calendario con un puntino.
 		api( '/admin/bookings?scope=upcoming' ).then( ( list ) =>
@@ -92,7 +94,7 @@ export default function Exceptions() {
 						__nextHasNoMarginBottom
 					/>
 				</div>
-				<BlockCalendar blocked={ blocked } inherited={ inherited } booked={ booked } onChange={ toggle } />
+				<BlockCalendar blocked={ blocked } inherited={ inherited } booked={ booked } holidays={ holidays } onChange={ toggle } />
 			</Section>
 
 			<Section title={ __( 'Giorni bloccati', 'wp-book-a-call' ) }>

@@ -4,6 +4,7 @@ import { TabPanel } from '@wordpress/components';
 import Bookings from './pages/Bookings';
 import EventTypes from './pages/EventTypes';
 import Exceptions from './pages/Exceptions';
+import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Updates from './pages/Updates';
 import './styles/admin.scss';
@@ -12,6 +13,7 @@ const TABS = [
 	{ name: 'bookings', title: __( 'Prenotazioni', 'wp-book-a-call' ) },
 	{ name: 'types', title: __( 'Tipi di call', 'wp-book-a-call' ) },
 	{ name: 'exceptions', title: __( 'Eccezioni', 'wp-book-a-call' ) },
+	{ name: 'notifications', title: __( 'Notifiche', 'wp-book-a-call' ) },
 	{ name: 'settings', title: __( 'Impostazioni', 'wp-book-a-call' ) },
 	{ name: 'updates', title: __( 'Aggiornamenti', 'wp-book-a-call' ) },
 ];
@@ -41,6 +43,8 @@ function App() {
 							return <EventTypes />;
 						case 'exceptions':
 							return <Exceptions />;
+						case 'notifications':
+							return <Notifications />;
 						case 'settings':
 							return <Settings />;
 						case 'updates':

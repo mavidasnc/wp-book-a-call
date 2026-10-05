@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Mavida\BookACall\REST;
 
+use Mavida\BookACall\Availability\AvailabilityService;
+use Mavida\BookACall\Availability\ItalianHolidays;
 use Mavida\BookACall\Booking\BookingService;
 use Mavida\BookACall\Database\BookingRepository;
 use Mavida\BookACall\Database\EventTypeRepository;
@@ -17,6 +19,7 @@ use Mavida\BookACall\Email\EmailSender;
 use Mavida\BookACall\Export\BookingExporter;
 use Mavida\BookACall\Google\OAuthClient;
 use Mavida\BookACall\Support\Settings;
+use Mavida\BookACall\Support\Token;
 use Mavida\BookACall\Webhook\WebhookSender;
 
 defined( 'ABSPATH' ) || exit;
@@ -36,6 +39,7 @@ final class AdminController extends RestController {
 	 * @param EmailSender         $emails     Email.
 	 * @param OAuthClient         $oauth      OAuth Google.
 	 * @param WebhookSender       $webhook    Webhook.
+	 * @param AvailabilityService $availability Disponibilità (spostamento delle prenotazioni).
 	 */
 	public function __construct(
 		private readonly EventTypeRepository $types,
@@ -44,7 +48,8 @@ final class AdminController extends RestController {
 		private readonly BookingService $service,
 		private readonly EmailSender $emails,
 		private readonly OAuthClient $oauth,
-		private readonly WebhookSender $webhook
+		private readonly WebhookSender $webhook,
+		private readonly AvailabilityService $availability
 	) {}
 
 	/**
@@ -103,6 +108,33 @@ final class AdminController extends RestController {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'export_bookings' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/bookings/(?P<id>\d+)/slots',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'booking_slots' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/bookings/(?P<id>\d+)/reschedule',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'reschedule_booking' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/holidays',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'holidays' ),
 				'permission_callback' => $admin,
 			)
 		);
@@ -243,6 +275,93 @@ final class AdminController extends RestController {
 	}
 
 	/**
+	 * Orari liberi e occupati per spostare una prenotazione (esclude la prenotazione stessa).
+	 *
+	 * @param \WP_REST_Request $request Richiesta (from, to: Y-m-d nel fuso del sito).
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function booking_slots( \WP_REST_Request $request ) {
+		$booking = $this->bookings->find( (int) $request['id'] );
+		$type    = $booking ? $this->types->find( $booking['event_type_id'] ) : null;
+		if ( ! $booking || ! $type ) {
+			return new \WP_Error( 'wpbac_not_found', __( 'Prenotazione non trovata.', 'wp-book-a-call' ), array( 'status' => 404 ) );
+		}
+
+		$tz   = wp_timezone();
+		$from = (string) $request->get_param( 'from' );
+		$to   = (string) $request->get_param( 'to' );
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $from ) || 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $to ) ) {
+			return new \WP_Error( 'wpbac_invalid', __( 'Date non valide.', 'wp-book-a-call' ), array( 'status' => 400 ) );
+		}
+		$from_ts = ( new \DateTimeImmutable( $from . ' 00:00', $tz ) )->getTimestamp();
+		$to_ts   = min( ( new \DateTimeImmutable( $to . ' 00:00', $tz ) )->modify( '+1 day' )->getTimestamp(), $from_ts + 70 * DAY_IN_SECONDS );
+
+		$result = $this->availability->slots_with_taken( $type, $from_ts, $to_ts, $booking['id'], true );
+		return $this->respond(
+			array(
+				'available'     => $result['available'],
+				'taken'         => $result['taken'],
+				'notify_client' => $this->client_is_notified( $booking ),
+				'start_ts'      => $booking['start_ts'],
+			)
+		);
+	}
+
+	/**
+	 * Sposta una prenotazione a un altro orario e avvisa il cliente (e gli amministratori) via email.
+	 *
+	 * @param \WP_REST_Request $request Richiesta (corpo JSON: start).
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function reschedule_booking( \WP_REST_Request $request ) {
+		$booking = $this->bookings->find( (int) $request['id'] );
+		$type    = $booking ? $this->types->find( $booking['event_type_id'] ) : null;
+		if ( ! $booking || ! $type ) {
+			return new \WP_Error( 'wpbac_not_found', __( 'Prenotazione non trovata.', 'wp-book-a-call' ), array( 'status' => 404 ) );
+		}
+
+		$params     = (array) $request->get_json_params();
+		$manage_url = $this->service->manage_url( $booking, Token::for_booking( $booking['id'] ) );
+		$updated    = $this->service->reschedule( $booking, $type, (int) ( $params['start'] ?? 0 ), $manage_url );
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
+
+		return $this->respond(
+			array(
+				'rescheduled'     => true,
+				'start_ts'        => $updated['start_ts'],
+				'client_notified' => $this->client_is_notified( $updated ),
+			)
+		);
+	}
+
+	/**
+	 * Festività italiane che il plugin considera chiuse (vuoto se l'opzione è spenta).
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function holidays(): \WP_REST_Response {
+		$year = (int) wp_date( 'Y' );
+		return $this->respond(
+			array(
+				'enabled' => (bool) Settings::get( 'close_holidays' ),
+				'days'    => Settings::get( 'close_holidays' ) ? ItalianHolidays::for_years( $year, $year + 2 ) : array(),
+			)
+		);
+	}
+
+	/**
+	 * Il cliente riceve le email? (impostazione attiva e indirizzo valido)
+	 *
+	 * @param array<string,mixed> $booking Prenotazione.
+	 * @return bool
+	 */
+	private function client_is_notified( array $booking ): bool {
+		return (bool) Settings::get( 'client_email_enabled' ) && is_email( $booking['email'] );
+	}
+
+	/**
 	 * Esporta le prenotazioni in CSV (il client crea il file e avvia il download).
 	 *
 	 * @param \WP_REST_Request $request Richiesta.
@@ -274,7 +393,12 @@ final class AdminController extends RestController {
 			return new \WP_Error( 'wpbac_not_found', __( 'Prenotazione non trovata.', 'wp-book-a-call' ), array( 'status' => 404 ) );
 		}
 		$this->service->cancel( $booking, $type );
-		return $this->respond( array( 'cancelled' => true ) );
+		return $this->respond(
+			array(
+				'cancelled'       => true,
+				'client_notified' => $this->client_is_notified( $booking ),
+			)
+		);
 	}
 
 	/**

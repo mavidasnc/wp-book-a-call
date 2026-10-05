@@ -36,9 +36,10 @@ final class SlotGenerator {
 	 * @param DateTimeZone                                      $tz         Fuso in cui sono espressi gli orari settimanali.
 	 * @param array<string,int>                                 $day_counts Prenotazioni già presenti per data locale (Y-m-d).
 	 * @param int                                               $max_per_day Massimo di prenotazioni al giorno (0 = nessun limite).
+	 * @param int[]|null                                        $taken      Se passato (per riferimento) raccoglie gli orari previsti ma occupati.
 	 * @return int[]
 	 */
-	public function generate( array $event_type, int $from_ts, int $to_ts, array $busy, array $exceptions, int $now, DateTimeZone $tz, array $day_counts = array(), int $max_per_day = 0 ): array {
+	public function generate( array $event_type, int $from_ts, int $to_ts, array $busy, array $exceptions, int $now, DateTimeZone $tz, array $day_counts = array(), int $max_per_day = 0, ?array &$taken = null ): array {
 		$duration = (int) $event_type['duration_min'] * 60;
 		$step     = max( 1, (int) $event_type['slot_step_min'] ) * 60;
 		$before   = (int) $event_type['buffer_before_min'] * 60;
@@ -55,9 +56,10 @@ final class SlotGenerator {
 		while ( $day->format( 'Y-m-d' ) <= $last ) {
 			$date = $day->format( 'Y-m-d' );
 
-			// Giorno chiuso (eccezione) oppure già al limite di prenotazioni: nessuno slot.
+			// Giorno chiuso (eccezione): nessuno slot, né libero né occupato.
+			// Giorno già al limite di prenotazioni: gli slot ci sono ma risultano tutti occupati.
 			$is_full = $max_per_day > 0 && ( $day_counts[ $date ] ?? 0 ) >= $max_per_day;
-			if ( ! $is_full && ! $this->is_closed( $date, $exceptions ) ) {
+			if ( ! $this->is_closed( $date, $exceptions ) ) {
 				$key = self::DAYS[ (int) $day->format( 'N' ) - 1 ];
 				foreach ( (array) ( $hours[ $key ] ?? array() ) as $range ) {
 					$window_start = ( new DateTimeImmutable( $date . ' ' . $range[0], $tz ) )->getTimestamp();
@@ -68,7 +70,10 @@ final class SlotGenerator {
 						if ( $start < $from_ts || $start >= $to_ts || $start < $earliest || $start > $latest ) {
 							continue;
 						}
-						if ( $this->overlaps_any( $start - $before, $end + $after, $busy ) ) {
+						if ( $is_full || $this->overlaps_any( $start - $before, $end + $after, $busy ) ) {
+							if ( null !== $taken ) {
+								$taken[ $start ] = $start;
+							}
 							continue;
 						}
 						$slots[ $start ] = $start;
@@ -80,6 +85,10 @@ final class SlotGenerator {
 		}
 
 		ksort( $slots );
+		if ( null !== $taken ) {
+			ksort( $taken );
+			$taken = array_values( $taken );
+		}
 		return array_values( $slots );
 	}
 

@@ -114,7 +114,7 @@ final class Plugin {
 		$webhook = new WebhookSender( $service );
 		$webhook->register();
 		( new ReminderService( $bookings, $types, $emails, $service ) )->register();
-		( new AdminController( $types, $bookings, $exceptions, $service, $emails, $oauth, $webhook ) )->register();
+		( new AdminController( $types, $bookings, $exceptions, $service, $emails, $oauth, $webhook, $avail ) )->register();
 		( new UpdateController() )->register();
 		( new PrivacyHandler( $bookings, $types, $service, $calendar ) )->register();
 

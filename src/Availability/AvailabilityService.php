@@ -47,6 +47,20 @@ final class AvailabilityService {
 	 * @return int[]
 	 */
 	public function slots( array $event_type, int $from_ts, int $to_ts, int $exclude_id = 0, bool $fresh = false ): array {
+		return $this->slots_with_taken( $event_type, $from_ts, $to_ts, $exclude_id, $fresh )['available'];
+	}
+
+	/**
+	 * Slot liberi e slot occupati (previsti dagli orari ma già impegnati) in una finestra.
+	 *
+	 * @param array<string,mixed> $event_type Tipo di call.
+	 * @param int                 $from_ts    Inizio (incluso).
+	 * @param int                 $to_ts      Fine (esclusa).
+	 * @param int                 $exclude_id Prenotazione da ignorare (spostamento).
+	 * @param bool                $fresh      Ignora la cache del free/busy Google.
+	 * @return array{available:int[],taken:int[]}
+	 */
+	public function slots_with_taken( array $event_type, int $from_ts, int $to_ts, int $exclude_id = 0, bool $fresh = false ): array {
 		$busy = $this->bookings->busy_intervals( $from_ts - DAY_IN_SECONDS, $to_ts + DAY_IN_SECONDS, $exclude_id );
 		$busy = array_merge( $busy, $this->google_busy( $from_ts - DAY_IN_SECONDS, $to_ts + DAY_IN_SECONDS, $fresh ) );
 
@@ -58,17 +72,61 @@ final class AvailabilityService {
 			$counts[ $day ] = ( $counts[ $day ] ?? 0 ) + 1;
 		}
 
-		return $this->generator->generate(
+		$taken     = array();
+		$available = $this->generator->generate(
 			$event_type,
 			$from_ts,
 			$to_ts,
 			$busy,
-			$this->exceptions->for_event_type( (int) $event_type['id'] ),
+			$this->closed_days( $event_type, $from_ts, $to_ts ),
 			time(),
 			$tz,
 			$counts,
-			(int) Settings::get( 'max_per_day' )
+			(int) Settings::get( 'max_per_day' ),
+			$taken
 		);
+
+		return array(
+			'available' => $available,
+			'taken'     => $taken,
+		);
+	}
+
+	/**
+	 * Giorni in cui non si prenota: eccezioni, festività italiane (se attivo) e, se richiesto,
+	 * il primo giorno operativo successivo a oggi.
+	 *
+	 * @param array<string,mixed> $event_type Tipo di call.
+	 * @param int                 $from_ts    Inizio finestra.
+	 * @param int                 $to_ts      Fine finestra.
+	 * @return array<int,array{date_from:string,date_to:string}>
+	 */
+	private function closed_days( array $event_type, int $from_ts, int $to_ts ): array {
+		$closed = $this->exceptions->for_event_type( (int) $event_type['id'] );
+
+		if ( Settings::get( 'close_holidays' ) ) {
+			// Gli anni coprono sia la finestra sia i 60 giorni in cui si cerca il giorno successivo.
+			$low  = (int) wp_date( 'Y', min( $from_ts - DAY_IN_SECONDS, time() ) );
+			$high = (int) wp_date( 'Y', max( $to_ts + DAY_IN_SECONDS, time() + 61 * DAY_IN_SECONDS ) );
+			foreach ( array_keys( ItalianHolidays::for_years( $low, $high ) ) as $date ) {
+				$closed[] = array(
+					'date_from' => $date,
+					'date_to'   => $date,
+				);
+			}
+		}
+
+		if ( Settings::get( 'skip_next_day' ) ) {
+			$next = NextOperativeDay::find( wp_date( 'Y-m-d' ), (array) $event_type['weekly_hours'], $closed );
+			if ( null !== $next ) {
+				$closed[] = array(
+					'date_from' => $next,
+					'date_to'   => $next,
+				);
+			}
+		}
+
+		return $closed;
 	}
 
 	/**

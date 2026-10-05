@@ -9,7 +9,6 @@
 	--wpbac-border: #dcdcde;
 	--wpbac-radius: 8px;
 
-	max-width: 960px;
 	margin-top: 24px;
 	color: var(--wpbac-text);
 
@@ -457,6 +456,13 @@
 			font-weight: 600;
 		}
 
+		// Festività italiane: chiuse in automatico, non modificabili da qui.
+		&.is-holiday:disabled {
+			background: #fcf3e0;
+			color: #8a5a00;
+			font-weight: 600;
+		}
+
 		// Puntino: ci sono prenotazioni confermate quel giorno.
 		&.has-booking::after {
 			content: "";
@@ -502,6 +508,10 @@
 		&.has-booking {
 			background: var(--wpbac-success);
 		}
+
+		&.is-holiday {
+			background: #dba617;
+		}
 	}
 
 	&__chips {
@@ -530,5 +540,31 @@
 		border: 1px solid var(--wpbac-border);
 		border-radius: 999px;
 		background: #f6f7f7;
+	}
+}
+
+// Modale "Sposta la call": vive fuori da .wpbac-admin, quindi ha le sue regole.
+.wpbac-admin-modal {
+	width: 100%;
+	max-width: 520px;
+
+	.components-base-control {
+		margin-bottom: 24px;
+	}
+
+	.components-notice {
+		margin: 0 0 24px;
+	}
+
+	&__current {
+		margin: 0 0 24px;
+	}
+
+	&__actions {
+		display: flex;
+		gap: 12px;
+		margin-top: 8px;
+		padding-top: 24px;
+		border-top: 1px solid #dcdcde;
 	}
 }
