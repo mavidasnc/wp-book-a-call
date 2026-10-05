@@ -121,6 +121,15 @@ final class AdminController extends RestController {
 		);
 		register_rest_route(
 			self::API_NAMESPACE,
+			'/admin/exceptions/toggle',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'toggle_exceptions' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
 			'/admin/exceptions/(?P<id>\d+)',
 			array(
 				'methods'             => 'DELETE',
@@ -236,6 +245,31 @@ final class AdminController extends RestController {
 	public function create_exception( \WP_REST_Request $request ) {
 		$id = $this->exceptions->create( (array) $request->get_json_params() );
 		return is_wp_error( $id ) ? $id : $this->respond( array( 'id' => $id ), 201 );
+	}
+
+	/**
+	 * Blocca o sblocca giorni dal calendario delle eccezioni.
+	 * Corpo: { dates: ["Y-m-d", ...], event_type_id: int|0, blocked: bool }.
+	 *
+	 * @param \WP_REST_Request $request Richiesta.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function toggle_exceptions( \WP_REST_Request $request ) {
+		$params = (array) $request->get_json_params();
+		$dates  = array_values( array_unique( array_filter( (array) ( $params['dates'] ?? array() ), 'is_string' ) ) );
+
+		$valid = count( $dates ) > 0 && count( $dates ) <= 400;
+		foreach ( $dates as $date ) {
+			$valid = $valid && 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date );
+		}
+		if ( ! $valid ) {
+			return new \WP_Error( 'wpbac_invalid', __( 'Date non valide.', 'wp-book-a-call' ), array( 'status' => 400 ) );
+		}
+
+		$event_type_id = ! empty( $params['event_type_id'] ) ? (int) $params['event_type_id'] : null;
+		$this->exceptions->toggle( $dates, $event_type_id, ! empty( $params['blocked'] ) );
+
+		return $this->respond( $this->exceptions->all() );
 	}
 
 	/**

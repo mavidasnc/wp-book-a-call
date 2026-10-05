@@ -25,6 +25,7 @@ use Mavida\BookACall\Google\OAuthClient;
 use Mavida\BookACall\REST\AdminController;
 use Mavida\BookACall\REST\PublicController;
 use Mavida\BookACall\REST\RestController;
+use Mavida\BookACall\Support\Updater;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -75,6 +76,9 @@ final class Plugin {
 		}
 		$this->booted = true;
 
+		// Aggiornamenti automatici dalle release GitHub.
+		Updater::init();
+
 		// Traduzioni: da WP 6.7 vanno caricate non prima di init.
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
@@ -94,6 +98,12 @@ final class Plugin {
 		// Le risposte REST del plugin non devono mai finire nelle cache di pagina.
 		add_filter( 'rest_post_dispatch', array( RestController::class, 'no_cache' ), 10, 3 );
 
+		// LiteSpeed Cache unisce gli script in un file con URL fisso (cache di un anno): dopo un
+		// aggiornamento i browser userebbero il JS vecchio. Gli script del plugin restano separati.
+		foreach ( array( 'litespeed_optimize_js_excludes', 'litespeed_optm_js_defer_exc' ) as $wpbac_filter ) {
+			add_filter( $wpbac_filter, array( self::class, 'exclude_from_litespeed' ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Hook di LiteSpeed Cache.
+		}
+
 		// Componenti.
 		( new BlockRegistrar() )->register();
 		( new PublicController( $types, $bookings, $avail, $service ) )->register();
@@ -103,6 +113,18 @@ final class Plugin {
 			( new AdminMenu() )->register();
 			$oauth->register();
 		}
+	}
+
+	/**
+	 * Aggiunge gli script del plugin alle esclusioni dell'ottimizzazione JS di LiteSpeed Cache.
+	 *
+	 * @param mixed $excludes Elenco attuale delle esclusioni.
+	 * @return array<int,string>
+	 */
+	public static function exclude_from_litespeed( mixed $excludes ): array {
+		$excludes   = is_array( $excludes ) ? $excludes : array_filter( array_map( 'trim', explode( "\n", (string) $excludes ) ) );
+		$excludes[] = 'wp-book-a-call/build/';
+		return array_values( array_unique( $excludes ) );
 	}
 
 	/**

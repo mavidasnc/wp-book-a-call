@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Mavida\BookACall\Database;
 
+use Mavida\BookACall\Availability\DateRanges;
+
 // Accesso diretto alle tabelle custom del plugin: nessuna cache applicabile.
 // phpcs:disable WordPress.DB.DirectDatabaseQuery
 // phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -82,6 +84,47 @@ final class ExceptionRepository {
 			)
 		);
 		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Blocca o sblocca dei giorni per un ambito (tutti i tipi di call o uno specifico).
+	 * Gli intervalli dell'ambito vengono ricalcolati (uniti o divisi) e riscritti.
+	 *
+	 * @param string[] $days          Giorni Y-m-d.
+	 * @param int|null $event_type_id Tipo di call, null per tutti.
+	 * @param bool     $blocked       True per bloccare, false per sbloccare.
+	 * @return void
+	 */
+	public function toggle( array $days, ?int $event_type_id, bool $blocked ): void {
+		global $wpdb;
+
+		$current = array();
+		foreach ( $this->all() as $row ) {
+			if ( $row['event_type_id'] === $event_type_id ) {
+				$current[] = array( $row['date_from'], $row['date_to'] );
+			}
+		}
+
+		$ranges = $blocked ? DateRanges::add( $current, $days ) : DateRanges::remove( $current, $days );
+
+		// Si riscrive l'intero ambito: più semplice e sempre coerente.
+		$table = Schema::table( 'exceptions' );
+		if ( null === $event_type_id ) {
+			$wpdb->query( "DELETE FROM {$table} WHERE event_type_id IS NULL" );
+		} else {
+			$wpdb->delete( $table, array( 'event_type_id' => $event_type_id ), array( '%d' ) );
+		}
+		foreach ( $ranges as $range ) {
+			$wpdb->insert(
+				$table,
+				array(
+					'event_type_id' => $event_type_id,
+					'date_from'     => $range[0],
+					'date_to'       => $range[1],
+					'note'          => '',
+				)
+			);
+		}
 	}
 
 	/**

@@ -12,7 +12,11 @@
     "lint:js": "wp-scripts lint-js",
     "lint:css": "wp-scripts lint-style",
     "build:zip": "npm run build && composer install --no-dev -o -q && node scripts/build-zip.js && composer install -q",
-    "wp-env": "wp-env"
+    "wp-env": "wp-env",
+    "release": "node scripts/release.js",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
   },
   "devDependencies": {
     "@wordpress/env": "^10.0.0",

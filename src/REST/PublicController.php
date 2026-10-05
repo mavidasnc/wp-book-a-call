@@ -119,7 +119,7 @@ final class PublicController extends RestController {
 	}
 
 	/**
-	 * Slot liberi tra due date (nel fuso del sito), massimo 62 giorni.
+	 * Slot liberi tra due date (nel fuso del sito), massimo 70 giorni (due mesi più i margini).
 	 *
 	 * @param \WP_REST_Request $request Richiesta.
 	 * @return \WP_REST_Response|\WP_Error
@@ -133,7 +133,7 @@ final class PublicController extends RestController {
 		$tz   = wp_timezone();
 		$from = ( new DateTimeImmutable( $request['from'] . ' 00:00', $tz ) )->getTimestamp();
 		$to   = ( new DateTimeImmutable( $request['to'] . ' 00:00', $tz ) )->modify( '+1 day' )->getTimestamp();
-		$to   = min( $to, $from + 62 * DAY_IN_SECONDS );
+		$to   = min( $to, $from + 70 * DAY_IN_SECONDS );
 		if ( $to <= $from ) {
 			return new \WP_Error( 'wpbac_invalid', __( 'Intervallo non valido.', 'wp-book-a-call' ), array( 'status' => 400 ) );
 		}

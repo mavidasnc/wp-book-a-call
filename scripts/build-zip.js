@@ -18,7 +18,7 @@ const ZIP_DIR = path.join( ROOT, 'zip' );
 const ZIP_OUT = path.join( ZIP_DIR, `${ SLUG }-${ pkg.version }.zip` );
 
 // File singoli nella root del plugin.
-const FILES = [ `${ SLUG }.php`, 'uninstall.php' ];
+const FILES = [ `${ SLUG }.php`, 'uninstall.php', '.htaccess' ];
 
 // Cartelle incluse (ricorsive).
 const DIRS = [ 'src', 'build', 'vendor', 'languages', 'templates' ];

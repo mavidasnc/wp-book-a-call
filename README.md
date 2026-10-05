@@ -47,6 +47,19 @@ Il refresh token è salvato cifrato (libsodium, chiave derivata dai salt di Word
 
 Le risposte REST del plugin inviano `Cache-Control: no-store` e `X-LiteSpeed-Cache-Control: no-cache`. Dopo un aggiornamento del plugin svuota la cache di pagina (il CSS del blocco è incorporato nell'HTML).
 
+## Aggiornamenti e release
+
+Il plugin si aggiorna da solo dalle **release di GitHub** (libreria `plugin-update-checker`, come gli altri plugin Mavida): WordPress mostra la notifica nella pagina Plugin e installa lo zip allegato alla release.
+
+Per pubblicare una nuova versione, con il working tree pulito:
+
+```bash
+# aggiorna prima CHANGELOG.md con la sezione ## [x.y.z]
+npm run release:patch   # oppure release:minor / release:major
+```
+
+Lo script aggiorna la versione (header del plugin, `WPBAC_VERSION`, `package.json`), costruisce asset e zip, crea commit e tag, fa push e pubblica la release con lo zip allegato. Richiede `git`, `gh` autenticato, Node e Composer.
+
 ## Hook per sviluppatori
 
 - `wpbac_booking_created( $booking, $event_type )`

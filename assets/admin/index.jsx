@@ -17,14 +17,15 @@ const TABS = [
 function App() {
 	// Dopo il ritorno da Google si riapre direttamente la scheda Impostazioni.
 	const [ initial ] = useState(
-		new URLSearchParams( window.location.search ).has( 'wpbac_google' )
-			? 'settings'
-			: 'bookings'
+		new URLSearchParams( window.location.search ).has( 'wpbac_google' ) ? 'settings' : 'bookings'
 	);
 
 	return (
 		<div className="wpbac-admin">
-			<h1>{ __( 'Book a Call', 'wp-book-a-call' ) }</h1>
+			<header className="wpbac-admin__header">
+				<h1>{ __( 'Book a Call', 'wp-book-a-call' ) }</h1>
+				<p>{ __( 'Gestisci prenotazioni, disponibilità e integrazione con Google Calendar.', 'wp-book-a-call' ) }</p>
+			</header>
 			<TabPanel tabs={ TABS } initialTabName={ initial }>
 				{ ( tab ) => {
 					switch ( tab.name ) {

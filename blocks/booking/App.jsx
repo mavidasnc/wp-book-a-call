@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import Modal from './Modal';
 import Picker from './Picker';
 import {
 	call,
@@ -21,13 +22,17 @@ function When( { start, tz } ) {
 	);
 }
 
-/** Form dei dati del cliente. */
-function Form( { config, start, tz, onBack, onDone } ) {
+/** Form dei dati del cliente, mostrato nella modale. */
+function Form( { config, start, tz, onBack, onDone, onConflict } ) {
 	const { event, privacyUrl, apiRoot } = config;
 	const startedAt = useRef( Date.now() );
 	const [ values, setValues ] = useState( { name: '', email: '', website: '', privacy: false, answers: {} } );
 	const [ error, setError ] = useState( '' );
+	const [ conflict, setConflict ] = useState( false );
 	const [ busy, setBusy ] = useState( false );
+
+	const setAnswer = ( id, value ) =>
+		setValues( { ...values, answers: { ...values.answers, [ id ]: value } } );
 
 	const submit = ( e ) => {
 		e.preventDefault();
@@ -51,11 +56,11 @@ function Form( { config, start, tz, onBack, onDone } ) {
 			.then( onDone )
 			.catch( ( err ) => {
 				setError( err.message );
-				setBusy( false );
-				// Slot occupato nel frattempo: si torna al calendario.
+				setConflict( 409 === err.status );
 				if ( 409 === err.status ) {
-					setTimeout( onBack, 2500 );
+					onConflict();
 				}
+				setBusy( false );
 			} );
 	};
 
@@ -75,9 +80,9 @@ function Form( { config, start, tz, onBack, onDone } ) {
 					{ q.label }
 					{ q.required ? ' *' : '' }
 					{ 'textarea' === q.type ? (
-						<textarea rows="3" required={ q.required } value={ values.answers[ q.id ] ?? '' } onChange={ ( e ) => setValues( { ...values, answers: { ...values.answers, [ q.id ]: e.target.value } } ) } />
+						<textarea rows="3" required={ q.required } value={ values.answers[ q.id ] ?? '' } onChange={ ( e ) => setAnswer( q.id, e.target.value ) } />
 					) : (
-						<input type="text" required={ q.required } value={ values.answers[ q.id ] ?? '' } onChange={ ( e ) => setValues( { ...values, answers: { ...values.answers, [ q.id ]: e.target.value } } ) } />
+						<input type="text" required={ q.required } value={ values.answers[ q.id ] ?? '' } onChange={ ( e ) => setAnswer( q.id, e.target.value ) } />
 					) }
 				</label>
 			) ) }
@@ -100,39 +105,49 @@ function Form( { config, start, tz, onBack, onDone } ) {
 					) }
 				</span>
 			</label>
-			{ error && <p className="wpbac-booking__error" role="alert">{ error }</p> }
+			{ error && (
+				<p className="wpbac-booking__error" role="alert">
+					{ error }
+				</p>
+			) }
 			<div className="wpbac-booking__buttons">
-				<button type="button" className="wpbac-booking__secondary" onClick={ onBack }>
-					{ __( 'Indietro', 'wp-book-a-call' ) }
-				</button>
-				<button type="submit" className="wpbac-booking__primary" disabled={ busy }>
-					{ busy ? __( 'Invio…', 'wp-book-a-call' ) : __( 'Conferma prenotazione', 'wp-book-a-call' ) }
-				</button>
+				{ conflict ? (
+					<button type="button" className="wpbac-booking__primary" onClick={ onBack }>
+						{ __( 'Scegli un altro orario', 'wp-book-a-call' ) }
+					</button>
+				) : (
+					<>
+						<button type="button" className="wpbac-booking__secondary" onClick={ onBack }>
+							{ __( 'Annulla', 'wp-book-a-call' ) }
+						</button>
+						<button type="submit" className="wpbac-booking__primary" disabled={ busy }>
+							{ busy ? __( 'Invio…', 'wp-book-a-call' ) : __( 'Conferma prenotazione', 'wp-book-a-call' ) }
+						</button>
+					</>
+				) }
 			</div>
 		</form>
 	);
 }
 
-/** Conferma finale con link al calendario. */
-function Done( { booking, tz, config } ) {
-	const title = `${ booking.event.title } - ${ config.hostName }`;
+/** Conferma finale con link al calendario, mostrata nella modale. */
+function Done( { booking, tz, config, onClose } ) {
 	const data = {
 		id: booking.id,
-		title,
+		title: `${ booking.event.title } - ${ config.hostName }`,
 		start: booking.start,
 		end: booking.end,
 		location: booking.meet_url,
 	};
 	return (
 		<div className="wpbac-booking__done" role="status">
-			<h3>{ __( 'Prenotazione confermata', 'wp-book-a-call' ) }</h3>
 			<When start={ booking.start } tz={ tz } />
-			<p>
-				{ __( 'Ti ho inviato una email di conferma con l\'invito per il calendario.', 'wp-book-a-call' ) }
-			</p>
+			<p>{ __( 'Ti ho inviato una email di conferma con l\'invito per il calendario.', 'wp-book-a-call' ) }</p>
 			{ booking.meet_url && (
 				<p>
-					<a href={ booking.meet_url } target="_blank" rel="noreferrer">{ __( 'Link Google Meet', 'wp-book-a-call' ) }</a>
+					<a href={ booking.meet_url } target="_blank" rel="noreferrer">
+						{ __( 'Link Google Meet', 'wp-book-a-call' ) }
+					</a>
 				</p>
 			) }
 			<div className="wpbac-booking__buttons">
@@ -142,6 +157,9 @@ function Done( { booking, tz, config } ) {
 				<a className="wpbac-booking__secondary" href={ icsUrl( data ) } download="invito.ics">
 					{ __( 'Scarica .ics', 'wp-book-a-call' ) }
 				</a>
+				<button type="button" className="wpbac-booking__primary" onClick={ onClose }>
+					{ __( 'Chiudi', 'wp-book-a-call' ) }
+				</button>
 			</div>
 		</div>
 	);
@@ -151,6 +169,7 @@ function Done( { booking, tz, config } ) {
 function Manage( { config, id, token, tz } ) {
 	const [ booking, setBooking ] = useState( null );
 	const [ mode, setMode ] = useState( 'view' );
+	const [ pending, setPending ] = useState( 0 ); // nuovo orario in attesa di conferma
 	const [ confirm, setConfirm ] = useState( false );
 	const [ error, setError ] = useState( '' );
 	const [ message, setMessage ] = useState( '' );
@@ -174,17 +193,23 @@ function Manage( { config, id, token, tz } ) {
 			.catch( ( e ) => setError( e.message ) );
 	};
 
-	const reschedule = ( start ) =>
-		call( config.apiRoot, `/manage/${ id }/reschedule`, { method: 'POST', body: { token, start } } )
+	const reschedule = () =>
+		call( config.apiRoot, `/manage/${ id }/reschedule`, { method: 'POST', body: { token, start: pending } } )
 			.then( ( b ) => {
 				setBooking( b );
 				setMode( 'view' );
+				setPending( 0 );
+				setError( '' );
 				setMessage( __( 'Prenotazione spostata. Ti ho inviato l\'invito aggiornato.', 'wp-book-a-call' ) );
 			} )
 			.catch( ( e ) => setError( e.message ) );
 
 	if ( error && ! booking ) {
-		return <p className="wpbac-booking__error" role="alert">{ error }</p>;
+		return (
+			<p className="wpbac-booking__error" role="alert">
+				{ error }
+			</p>
+		);
 	}
 	if ( ! booking ) {
 		return <p className="wpbac-booking__hint">{ __( 'Caricamento…', 'wp-book-a-call' ) }</p>;
@@ -194,11 +219,30 @@ function Manage( { config, id, token, tz } ) {
 		return (
 			<>
 				<h3>{ __( 'Scegli il nuovo orario', 'wp-book-a-call' ) }</h3>
-				{ error && <p className="wpbac-booking__error" role="alert">{ error }</p> }
-				<Picker apiRoot={ config.apiRoot } slug={ booking.event.slug } tz={ tz } onSelect={ reschedule } />
-				<button type="button" className="wpbac-booking__secondary" onClick={ () => setMode( 'view' ) }>
-					{ __( 'Indietro', 'wp-book-a-call' ) }
-				</button>
+				<Picker apiRoot={ config.apiRoot } slug={ booking.event.slug } tz={ tz } onSelect={ setPending } />
+				<div className="wpbac-booking__buttons">
+					<button type="button" className="wpbac-booking__secondary" onClick={ () => setMode( 'view' ) }>
+						{ __( 'Indietro', 'wp-book-a-call' ) }
+					</button>
+				</div>
+				{ pending > 0 && (
+					<Modal title={ __( 'Conferma lo spostamento', 'wp-book-a-call' ) } onClose={ () => setPending( 0 ) }>
+						<When start={ pending } tz={ tz } />
+						{ error && (
+							<p className="wpbac-booking__error" role="alert">
+								{ error }
+							</p>
+						) }
+						<div className="wpbac-booking__buttons">
+							<button type="button" className="wpbac-booking__secondary" onClick={ () => setPending( 0 ) }>
+								{ __( 'Scegli un altro orario', 'wp-book-a-call' ) }
+							</button>
+							<button type="button" className="wpbac-booking__primary" onClick={ reschedule }>
+								{ __( 'Conferma spostamento', 'wp-book-a-call' ) }
+							</button>
+						</div>
+					</Modal>
+				) }
 			</>
 		);
 	}
@@ -208,7 +252,9 @@ function Manage( { config, id, token, tz } ) {
 			<h3>{ booking.event.title }</h3>
 			{ message && <p role="status">{ message }</p> }
 			{ booking.cancelled ? (
-				<p><em>{ __( 'Prenotazione annullata.', 'wp-book-a-call' ) }</em></p>
+				<p>
+					<em>{ __( 'Prenotazione annullata.', 'wp-book-a-call' ) }</em>
+				</p>
 			) : (
 				<>
 					<When start={ booking.start } tz={ tz } />
@@ -222,7 +268,11 @@ function Manage( { config, id, token, tz } ) {
 					</div>
 				</>
 			) }
-			{ error && <p className="wpbac-booking__error" role="alert">{ error }</p> }
+			{ error && (
+				<p className="wpbac-booking__error" role="alert">
+					{ error }
+				</p>
+			) }
 		</div>
 	);
 }
@@ -234,18 +284,43 @@ export default function App( { config } ) {
 	const manageToken = params.get( 'wpbac_token' );
 
 	const [ tz, setTz ] = useState( Intl.DateTimeFormat().resolvedOptions().timeZone || siteTimezone );
-	const [ start, setStart ] = useState( 0 );
-	const [ done, setDone ] = useState( null );
+	const [ start, setStart ] = useState( 0 ); // slot scelto: apre la modale
+	const [ done, setDone ] = useState( null ); // prenotazione confermata
+	const [ pickerKey, setPickerKey ] = useState( 0 ); // cambia per ricaricare gli slot
+	const [ stale, setStale ] = useState( false ); // lo slot scelto è risultato occupato
+
+	// Chiude la modale. Gli slot si ricaricano solo se servono (prenotazione fatta o slot occupato):
+	// altrimenti il selettore resta com'è e il focus torna al pulsante che ha aperto la modale.
+	const closeModal = () => {
+		if ( done || stale ) {
+			setPickerKey( ( k ) => k + 1 );
+			setStale( false );
+		}
+		setStart( 0 );
+		setDone( null );
+	};
 
 	let content;
 	if ( manageId && manageToken ) {
 		content = <Manage config={ config } id={ manageId } token={ manageToken } tz={ tz } />;
-	} else if ( done ) {
-		content = <Done booking={ done } tz={ tz } config={ config } />;
-	} else if ( start ) {
-		content = <Form config={ config } start={ start } tz={ tz } onBack={ () => setStart( 0 ) } onDone={ setDone } />;
 	} else {
-		content = <Picker apiRoot={ config.apiRoot } slug={ event.slug } tz={ tz } onSelect={ setStart } />;
+		content = (
+			<>
+				<Picker key={ pickerKey } apiRoot={ config.apiRoot } slug={ event.slug } tz={ tz } onSelect={ setStart } />
+				{ start > 0 && (
+					<Modal
+						title={ done ? __( 'Prenotazione confermata', 'wp-book-a-call' ) : __( 'Conferma la prenotazione', 'wp-book-a-call' ) }
+						onClose={ closeModal }
+					>
+						{ done ? (
+							<Done booking={ done } tz={ tz } config={ config } onClose={ closeModal } />
+						) : (
+							<Form config={ config } start={ start } tz={ tz } onBack={ closeModal } onDone={ setDone } onConflict={ () => setStale( true ) } />
+						) }
+					</Modal>
+				) }
+			</>
+		);
 	}
 
 	return (
@@ -263,7 +338,9 @@ export default function App( { config } ) {
 						{ __( 'Fuso orario', 'wp-book-a-call' ) }
 						<select value={ tz } onChange={ ( e ) => setTz( e.target.value ) }>
 							{ timezoneList( tz, siteTimezone ).map( ( z ) => (
-								<option key={ z } value={ z }>{ z }</option>
+								<option key={ z } value={ z }>
+									{ z }
+								</option>
 							) ) }
 						</select>
 					</label>

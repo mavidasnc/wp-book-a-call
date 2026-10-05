@@ -1,59 +1,344 @@
+// Stile ispirato a wp-paid-attachments (classi WP native, token CSS), con più spazio tra gli elementi.
 .wpbac-admin {
+	--wpbac-primary: #2271b1;
+	--wpbac-danger: #d63638;
+	--wpbac-success: #00a32a;
+	--wpbac-text: #1d2327;
+	--wpbac-muted: #646970;
+	--wpbac-border: #dcdcde;
+	--wpbac-radius: 8px;
+
 	max-width: 960px;
+	margin-top: 24px;
+	color: var(--wpbac-text);
+
+	// Respiro tra i controlli di @wordpress/components.
+	.components-base-control,
+	.components-toggle-control {
+		margin-bottom: 24px;
+	}
+
+	.components-notice {
+		margin: 0 0 24px;
+	}
+
+	.components-tab-panel__tabs {
+		margin-bottom: 8px;
+	}
+
+	&__header {
+		margin-bottom: 24px;
+
+		h1 {
+			margin: 0 0 4px;
+			padding: 0;
+		}
+
+		p {
+			margin: 0;
+			color: var(--wpbac-muted);
+		}
+	}
 
 	&__panel {
-		padding: 16px 0;
-	}
-
-	&__row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 16px;
-
-		> * {
-			flex: 1 1 160px;
-		}
-	}
-
-	&__table {
-		width: 100%;
-		border-collapse: collapse;
-		background: #fff;
-
-		th,
-		td {
-			padding: 8px 12px;
-			border-bottom: 1px solid #dcdcde;
-			text-align: left;
-			vertical-align: top;
-		}
+		padding: 24px 0 8px;
 	}
 
 	&__card {
-		margin-bottom: 16px;
-		padding: 16px;
-		border: 1px solid #dcdcde;
+		margin-bottom: 24px;
+		padding: 28px 32px;
+		border: 1px solid var(--wpbac-border);
+		border-radius: var(--wpbac-radius);
 		background: #fff;
 	}
 
-	&__hours {
-		display: grid;
-		grid-template-columns: 56px 1fr;
-		gap: 8px 12px;
-		align-items: start;
-		margin-bottom: 16px;
+	&__card-title {
+		margin: 0 0 4px;
+		padding: 0;
+		font-size: 1.1rem;
 	}
 
-	&__range {
+	&__card-desc {
+		margin: 0 0 28px;
+		color: var(--wpbac-muted);
+	}
+
+	&__grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 32px;
+
+		@media (max-width: 782px) {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	&__label {
+		margin: 0 0 12px;
+		font-weight: 600;
+	}
+
+	&__hint,
+	&__summary,
+	&__meta {
+		color: var(--wpbac-muted);
+	}
+
+	&__summary {
+		margin: 20px 0 0;
+		padding: 12px 16px;
+		border-radius: 6px;
+		background: #f6f7f7;
+	}
+
+	&__empty {
+		color: var(--wpbac-muted);
+		font-style: italic;
+	}
+
+	&__toolbar {
 		display: flex;
-		gap: 8px;
 		align-items: flex-end;
-		margin-bottom: 8px;
+		gap: 16px;
+		margin-bottom: 24px;
 	}
 
 	&__actions {
 		display: flex;
+		gap: 12px;
+		margin: 8px 0 32px;
+		padding-top: 24px;
+		border-top: 1px solid var(--wpbac-border);
+	}
+
+	// Elenco a card dei tipi di call.
+	&__list {
+		margin-top: 24px;
+	}
+
+	&__item {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 20px 0;
+		border-top: 1px solid var(--wpbac-border);
+	}
+
+	&__meta {
+		margin: 6px 0 0;
+	}
+
+	&__item-actions {
+		display: flex;
+		flex-wrap: wrap;
 		gap: 8px;
-		margin-top: 16px;
+		margin-top: 8px;
+	}
+
+	&__badge {
+		display: inline-block;
+		margin-top: 6px;
+		margin-left: 8px;
+		padding: 2px 10px;
+		border-radius: 999px;
+		background: #f0f0f1;
+		font-size: 12px;
+		font-weight: 600;
+
+		&.is-confirmed {
+			background: #edfaef;
+			color: #007017;
+		}
+
+		&.is-cancelled {
+			background: #fcf0f1;
+			color: #b32d2e;
+		}
+	}
+
+	&__table {
+		margin-top: 8px;
+
+		th,
+		td {
+			padding: 14px 16px;
+			vertical-align: top;
+		}
+	}
+
+	// Disponibilità.
+	&__days {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-bottom: 32px;
+	}
+
+	&__range {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 16px;
+		margin-bottom: 16px;
+	}
+
+	&__question {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto;
+		align-items: end;
+		gap: 16px;
+		margin-bottom: 20px;
+		padding-bottom: 20px;
+		border-bottom: 1px dashed var(--wpbac-border);
+
+		@media (max-width: 782px) {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.components-base-control,
+		.components-toggle-control {
+			margin-bottom: 0;
+		}
+	}
+
+	// Calendario delle eccezioni.
+	&__scope {
+		max-width: 360px;
+		margin-bottom: 28px;
+	}
+
+	&__months {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 40px;
+
+		@media (max-width: 782px) {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	&__month-head {
+		display: grid;
+		grid-template-columns: 40px 1fr 40px;
+		align-items: center;
+		margin-bottom: 16px;
+		text-align: center;
+		text-transform: capitalize;
+	}
+
+	&__cal-grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 6px;
+	}
+
+	&__cal-weekday {
+		text-align: center;
+		color: var(--wpbac-muted);
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	&__cal-day {
+		position: relative;
+		aspect-ratio: 1;
+		padding: 0;
+		border: 1px solid var(--wpbac-border);
+		border-radius: 6px;
+		background: #fff;
+		color: var(--wpbac-text);
+		cursor: pointer;
+
+		&:hover:not(:disabled) {
+			border-color: var(--wpbac-primary);
+		}
+
+		&:disabled {
+			border-color: transparent;
+			background: transparent;
+			color: #a7aaad;
+			cursor: default;
+		}
+
+		&.is-today {
+			font-weight: 700;
+			box-shadow: inset 0 0 0 1px var(--wpbac-primary);
+		}
+
+		&.is-blocked {
+			border-color: var(--wpbac-danger);
+			background: var(--wpbac-danger);
+			color: #fff;
+		}
+
+		&.is-inherited {
+			border-color: #f0b6b7;
+			background: #fcf0f1;
+			color: #b32d2e;
+		}
+
+		// Puntino: ci sono prenotazioni confermate quel giorno.
+		&.has-booking::after {
+			content: "";
+			position: absolute;
+			right: 5px;
+			bottom: 5px;
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: var(--wpbac-success);
+		}
+	}
+
+	&__legend {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 16px;
+		margin: 24px 0 0;
+		color: var(--wpbac-muted);
+	}
+
+	&__legend-hint {
+		margin-left: auto;
+	}
+
+	&__swatch {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		margin-right: -8px;
+		border-radius: 3px;
+
+		&.is-blocked {
+			background: var(--wpbac-danger);
+		}
+
+		&.has-booking {
+			border-radius: 50%;
+			background: var(--wpbac-success);
+		}
+	}
+
+	&__chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	&__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		margin: 0;
+		padding: 6px 8px 6px 14px;
+		border: 1px solid var(--wpbac-border);
+		border-radius: 999px;
+		background: #f6f7f7;
 	}
 }

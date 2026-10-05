@@ -1,0 +1,14 @@
+# Cache breve per gli asset del plugin.
+# Alcune cache (es. LiteSpeed con "Remove Query Strings") tolgono ?ver= e servirebbero JS/CSS per un anno:
+# dopo un aggiornamento i browser userebbero i file vecchi. Con 1 ora il ritardo resta trascurabile.
+<IfModule mod_expires.c>
+	ExpiresActive On
+	ExpiresByType application/javascript "access plus 1 hour"
+	ExpiresByType text/javascript "access plus 1 hour"
+	ExpiresByType text/css "access plus 1 hour"
+</IfModule>
+<IfModule mod_headers.c>
+	<FilesMatch "\.(js|css)$">
+		Header set Cache-Control "public, max-age=3600"
+	</FilesMatch>
+</IfModule>

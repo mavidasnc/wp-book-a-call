@@ -11,6 +11,7 @@ npm run build:zip        # build + composer --no-dev + zip in zip/ + ripristino 
 composer lint            # phpcs (deve restare a zero errori e warning)
 composer analyze         # phpstan livello 6
 composer test            # phpunit (tests/Unit)
+npm run release:minor    # release: bump versione, zip, tag, push, GitHub Release (serve CHANGELOG [x.y.z])
 ```
 
 Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tooling), mentre la build sì.
@@ -32,3 +33,6 @@ Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tool
 - Il CSS del blocco è incorporato nell'HTML: dopo un deploy va purgata la cache di pagina.
 - `block.json` non ha `version` di proposito: WordPress usa la data del file e il CSS si aggiorna a ogni build.
 - Con WP-CLI sul blog di produzione serve `--url=https://maurizio.mavida.com` (il `siteurl` letto da CLI è `https:///app`).
+- Gli aggiornamenti automatici passano da `Support/Updater.php` (plugin-update-checker + release asset): il repo GitHub `mavidasnc/wp-book-a-call` deve restare pubblico.
+- Disponibilità: il backend salva una mappa per giorno, l'admin la edita come "fasce comuni + giorni attivi" (`assets/admin/availability.js`).
+- Eccezioni: `ExceptionRepository::toggle()` riscrive gli intervalli di un ambito usando `Availability/DateRanges` (unione e divisione, testata).
