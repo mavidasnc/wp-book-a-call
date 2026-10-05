@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       WP Book a Call
- * Plugin URI:        https://github.com/miziomon/wp-book-a-call
+ * Plugin URI:        https://github.com/mavidasnc/wp-book-a-call
  * Description:       Blocco Gutenberg per prenotare call conoscitive, con slot configurabili, notifiche email con iCal e integrazione opzionale con Google Calendar.
  * Version:           0.2.0
  * Requires at least: 6.5
