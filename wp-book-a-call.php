@@ -3,7 +3,7 @@
  * Plugin Name:       WP Book a Call
  * Plugin URI:        https://github.com/miziomon/wp-book-a-call
  * Description:       Blocco Gutenberg per prenotare call conoscitive, con slot configurabili, notifiche email con iCal e integrazione opzionale con Google Calendar.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.5
  * Requires PHP:      8.3
  * Author:            Mavida snc
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Costanti del plugin (guard per evitare conflitti con wp-config.php).
 if ( ! defined( 'WPBAC_VERSION' ) ) {
-	define( 'WPBAC_VERSION', '0.1.0' );
+	define( 'WPBAC_VERSION', '0.2.0' );
 }
 if ( ! defined( 'WPBAC_PLUGIN_FILE' ) ) {
 	define( 'WPBAC_PLUGIN_FILE', __FILE__ );
