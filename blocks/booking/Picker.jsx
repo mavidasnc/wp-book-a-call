@@ -107,7 +107,11 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 		call( apiRoot, `/event-types/${ slug }/slots`, {
 			params: { from: keyOf( from ), to: keyOf( to ) },
 		} )
-			.then( ( data ) => setSlots( data.slots ) )
+			.then( ( data ) => {
+				// Orari occupati (previsti ma già impegnati): il widget li mostra non selezionabili.
+				setTaken( data.taken ?? [] );
+				setSlots( data.slots );
+			} )
 			.catch( ( e ) => setError( e.message ) );
 	}, [ apiRoot, slug, cursor ] );
 

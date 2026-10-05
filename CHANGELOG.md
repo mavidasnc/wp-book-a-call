@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1]
+
+- Correzione: il widget non mostrava gli orari occupati (lucchetto e giorni pieni) perché ignorava l'elenco ricevuto dal server.
+
 ## [0.6.0]
 
 - Frontend: gli orari già occupati restano visibili ma non selezionabili, con un lucchetto; un giorno con tutti gli orari occupati resta cliccabile e li mostra tutti.
