@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0]
+
+- Promemoria email al cliente 24 ore e 1 ora prima della call (WP-Cron ogni 15 minuti), con link per spostare o annullare. Si attivano dalle Impostazioni.
+- Webhook verso sistemi esterni (es. n8n) a ogni prenotazione creata, spostata o annullata: POST JSON firmato con HMAC SHA-256, con pulsante di prova.
+- Nuova scheda Aggiornamenti: verifica e installa le nuove versioni dalle release GitHub.
+- Eccezioni: calendario con lo stesso aspetto del frontend.
+- Tipi di call: tabella con durata, disponibilità, luogo, regole e stato senza dover aprire la modifica.
+- Spaziature uniformi tra pulsanti, interruttori e campi in tutto l'admin e nella modale.
+- Release automatiche: il workflow GitHub Actions costruisce lo zip quando si pubblica un tag; `npm run release:*` non richiede più la build locale (resta disponibile con `--local`).
+- Il token dei link di gestione è ora derivato dall'id della prenotazione, così può comparire nei promemoria.
+
 ## [0.2.0]
 
 - Widget: due mesi affiancati, orari piccoli su due colonne, layout a tre colonne su schermi larghi (un solo mese su schermi stretti).

@@ -10,6 +10,8 @@ Plugin WordPress con blocco Gutenberg per prenotare **call conoscitive**, in sti
 - Email di notifica agli amministratori e conferma al cliente, con **iCal (.ics)** allegato.
 - **Annulla e sposta** tramite link firmato nell'email.
 - **Google Calendar** opzionale (OAuth2 con client proprio): crea l'evento, genera il link **Google Meet**, esclude gli orari occupati (free/busy).
+- Promemoria email 24 ore e 1 ora prima della call (WP-Cron).
+- Webhook firmato (HMAC SHA-256) verso n8n o altri sistemi a ogni prenotazione.
 - Anti-spam: honeypot, tempo minimo di compilazione, rate limit, consenso privacy obbligatorio.
 - Nessuna doppia prenotazione: lock su database e nuovo controllo di disponibilità prima del salvataggio.
 
@@ -51,6 +53,8 @@ Le risposte REST del plugin inviano `Cache-Control: no-store` e `X-LiteSpeed-Cac
 
 Il plugin si aggiorna da solo dalle **release di GitHub** (libreria `plugin-update-checker`, come gli altri plugin Mavida): WordPress mostra la notifica nella pagina Plugin e installa lo zip allegato alla release.
 
+Dall'admin, scheda **Aggiornamenti**, si può verificare subito la presenza di una nuova versione e installarla con un clic.
+
 Per pubblicare una nuova versione, con il working tree pulito:
 
 ```bash
@@ -58,7 +62,12 @@ Per pubblicare una nuova versione, con il working tree pulito:
 npm run release:patch   # oppure release:minor / release:major
 ```
 
-Lo script aggiorna la versione (header del plugin, `WPBAC_VERSION`, `package.json`), costruisce asset e zip, crea commit e tag, fa push e pubblica la release con lo zip allegato. Richiede `git`, `gh` autenticato, Node e Composer.
+Lo script aggiorna la versione (header del plugin, `WPBAC_VERSION`, `package.json`, `phpstan-constants.php`), crea commit e tag e fa push. Il workflow `.github/workflows/release.yml` costruisce lo zip e pubblica la release; lo script attende che sia pronta. Richiede `git` e `gh` autenticato. Con `--local` (`node scripts/release.js minor --local`) lo zip si costruisce sul proprio computer (servono Node, npm e Composer).
+
+## Promemoria e webhook
+
+- **Promemoria:** in Impostazioni si attivano quelli a 24 ore e a 1 ora. Partono da WP-Cron (ogni 15 minuti) solo per le call prenotate con anticipo sufficiente.
+- **Webhook:** in Impostazioni si indica l'URL (es. un nodo Webhook di n8n) e un segreto facoltativo. Eventi: `booking.created`, `booking.rescheduled`, `booking.cancelled`. Il corpo è JSON; se c'è un segreto la richiesta ha l'header `X-Wpbac-Signature: sha256=<hmac del corpo>`. L'invio non blocca la prenotazione.
 
 ## Hook per sviluppatori
 

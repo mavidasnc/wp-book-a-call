@@ -28,7 +28,7 @@ final class Settings {
 	 *
 	 * @var string[]
 	 */
-	public const SECRET_KEYS = array( 'google_client_secret', 'google_refresh_token' );
+	public const SECRET_KEYS = array( 'google_client_secret', 'google_refresh_token', 'webhook_secret' );
 
 	/**
 	 * Valori di default.
@@ -40,6 +40,10 @@ final class Settings {
 			'notify_enabled'           => true,
 			'notify_recipients'        => (string) get_option( 'admin_email' ),
 			'client_email_enabled'     => true,
+			'reminder_24h'             => true,
+			'reminder_1h'              => false,
+			'webhook_url'              => '',
+			'webhook_secret'           => '',
 			'host_name'                => '',
 			'privacy_url'              => '',
 			'delete_data_on_uninstall' => false,
@@ -116,7 +120,7 @@ final class Settings {
 				$current[ $key ] = Crypto::encrypt( (string) $value );
 			} elseif ( is_bool( $defaults[ $key ] ) ) {
 				$current[ $key ] = (bool) $value;
-			} elseif ( 'privacy_url' === $key ) {
+			} elseif ( in_array( $key, array( 'privacy_url', 'webhook_url' ), true ) ) {
 				$current[ $key ] = esc_url_raw( (string) $value );
 			} else {
 				$current[ $key ] = sanitize_text_field( (string) $value );

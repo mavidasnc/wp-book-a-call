@@ -102,6 +102,40 @@ final class EmailSender {
 	}
 
 	/**
+	 * Promemoria al cliente, senza allegato (l'invito è già nel suo calendario).
+	 *
+	 * @param string              $kind       '24' (24 ore prima) o '1' (1 ora prima).
+	 * @param array<string,mixed> $booking    Prenotazione.
+	 * @param array<string,mixed> $event_type Tipo di call.
+	 * @param string              $manage_url Link per spostare o annullare.
+	 * @return bool
+	 */
+	public function send_reminder( string $kind, array $booking, array $event_type, string $manage_url ): bool {
+		if ( ! is_email( $booking['email'] ) ) {
+			return false;
+		}
+
+		$tz    = $this->timezone( (string) $booking['timezone'] );
+		$admin = Settings::recipients();
+		$links = '' !== $manage_url ? array( 'Sposta o annulla la prenotazione' => $manage_url ) : array();
+
+		return $this->send(
+			array( $booking['email'] ),
+			sprintf( 'Promemoria: %s, %s', $event_type['title'], wp_date( 'j F \a\l\l\e H:i', $booking['start_ts'], $tz ) ),
+			array(
+				'heading' => sprintf( 'Ciao %s', $booking['name'] ),
+				'intro'   => '1' === $kind ? 'Ti ricordo che la nostra call inizia tra circa un\'ora.' : 'Ti ricordo che la nostra call è fissata per domani, qui sotto trovi i dettagli.',
+				'rows'    => $this->rows( $booking, $event_type, false ),
+				'links'   => $links,
+				'footer'  => Settings::host_name(),
+			),
+			'',
+			'REQUEST',
+			$admin ? array( 'Reply-To: ' . Settings::host_name() . ' <' . $admin[0] . '>' ) : array()
+		);
+	}
+
+	/**
 	 * Email di prova verso i destinatari configurati.
 	 *
 	 * @return bool

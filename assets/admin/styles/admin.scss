@@ -1,4 +1,5 @@
 // Stile ispirato a wp-paid-attachments (classi WP native, token CSS), con più spazio tra gli elementi.
+// Scala degli spazi: 8 / 12 / 16 / 24 / 32.
 .wpbac-admin {
 	--wpbac-primary: #2271b1;
 	--wpbac-danger: #d63638;
@@ -16,6 +17,16 @@
 	.components-base-control,
 	.components-toggle-control {
 		margin-bottom: 24px;
+	}
+
+	// Il testo di aiuto sotto un controllo non deve toccarlo.
+	.components-base-control__help {
+		margin-top: 8px;
+	}
+
+	.components-toggle-control .components-base-control__help {
+		margin-top: 8px;
+		margin-left: 52px;
 	}
 
 	.components-notice {
@@ -46,10 +57,15 @@
 
 	&__card {
 		margin-bottom: 24px;
-		padding: 28px 32px;
+		padding: 32px;
 		border: 1px solid var(--wpbac-border);
 		border-radius: var(--wpbac-radius);
 		background: #fff;
+
+		// L'ultimo elemento non aggiunge spazio oltre al padding della card.
+		> :last-child {
+			margin-bottom: 0;
+		}
 	}
 
 	&__card-title {
@@ -58,8 +74,13 @@
 		font-size: 1.1rem;
 	}
 
+	// Titolo senza descrizione: più spazio sotto, altrimenti tocca il contenuto.
+	&__card-title.is-bare {
+		margin-bottom: 24px;
+	}
+
 	&__card-desc {
-		margin: 0 0 28px;
+		margin: 0 0 32px;
 		color: var(--wpbac-muted);
 	}
 
@@ -84,14 +105,24 @@
 		color: var(--wpbac-muted);
 	}
 
+	&__hint {
+		margin: 16px 0 0;
+
+		// Pulsanti subito dopo un testo di aiuto: stesso respiro del testo.
+		+ .wpbac-admin__inline-actions {
+			margin-top: 16px;
+		}
+	}
+
 	&__summary {
-		margin: 20px 0 0;
+		margin: 24px 0 0;
 		padding: 12px 16px;
 		border-radius: 6px;
 		background: #f6f7f7;
 	}
 
 	&__empty {
+		margin: 24px 0 0;
 		color: var(--wpbac-muted);
 		font-style: italic;
 	}
@@ -103,6 +134,16 @@
 		margin-bottom: 24px;
 	}
 
+	// Pulsanti sotto un gruppo di campi: sempre staccati dal contenuto sopra e tra loro.
+	&__inline-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		margin-top: 8px;
+	}
+
+	// Pulsante di salvataggio a fondo pagina.
 	&__actions {
 		display: flex;
 		gap: 12px;
@@ -111,35 +152,48 @@
 		border-top: 1px solid var(--wpbac-border);
 	}
 
-	// Elenco a card dei tipi di call.
-	&__list {
-		margin-top: 24px;
-	}
-
-	&__item {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		padding: 20px 0;
-		border-top: 1px solid var(--wpbac-border);
-	}
-
-	&__meta {
-		margin: 6px 0 0;
-	}
-
 	&__item-actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: 12px;
 		margin-top: 8px;
+	}
+
+	// Dati chiave in colonna (versione installata, ultima versione...).
+	&__facts {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 24px;
+		margin: 0 0 32px;
+
+		dt {
+			margin-bottom: 4px;
+			color: var(--wpbac-muted);
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+		}
+
+		dd {
+			margin: 0;
+			font-size: 1.25rem;
+			font-weight: 600;
+		}
+
+		.wpbac-admin__badge {
+			margin-top: 0;
+			vertical-align: middle;
+		}
+	}
+
+	&__meta {
+		margin: 4px 0 0;
+		font-size: 12px;
 	}
 
 	&__badge {
 		display: inline-block;
-		margin-top: 6px;
+		margin-top: 8px;
 		margin-left: 8px;
 		padding: 2px 10px;
 		border-radius: 999px;
@@ -158,14 +212,43 @@
 		}
 	}
 
+	// Tabelle: celle ariose.
 	&__table {
-		margin-top: 8px;
+		margin-top: 24px;
 
 		th,
 		td {
-			padding: 14px 16px;
+			padding: 16px;
 			vertical-align: top;
 		}
+
+		.wpbac-admin__badge {
+			margin: 0;
+		}
+
+		code {
+			font-size: 12px;
+		}
+	}
+
+	&__rules {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		color: var(--wpbac-muted);
+		font-size: 12px;
+
+		li {
+			margin: 0 0 6px;
+		}
+	}
+
+	&__row-actions {
+		display: flex;
+		flex-wrap: nowrap;
+		justify-content: flex-end;
+		gap: 8px;
+		white-space: nowrap;
 	}
 
 	// Disponibilità.
@@ -189,8 +272,8 @@
 		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto;
 		align-items: end;
 		gap: 16px;
-		margin-bottom: 20px;
-		padding-bottom: 20px;
+		margin-bottom: 24px;
+		padding-bottom: 24px;
 		border-bottom: 1px dashed var(--wpbac-border);
 
 		@media (max-width: 782px) {
@@ -201,18 +284,31 @@
 		.components-toggle-control {
 			margin-bottom: 0;
 		}
+
+		// Interruttore e pulsante allineati all'altezza dei campi accanto.
+		.components-toggle-control {
+			display: flex;
+			align-items: center;
+			min-height: 40px;
+		}
+
+		> .components-button {
+			align-self: end;
+			height: 40px;
+		}
 	}
 
-	// Calendario delle eccezioni.
+	// Calendario delle eccezioni: stesso aspetto di quello del frontend (giorni tondi, mesi affiancati).
 	&__scope {
 		max-width: 360px;
-		margin-bottom: 28px;
+		margin-bottom: 32px;
 	}
 
 	&__months {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 40px;
+		max-width: 680px;
 
 		@media (max-width: 782px) {
 			grid-template-columns: minmax(0, 1fr);
@@ -221,20 +317,30 @@
 
 	&__month-head {
 		display: grid;
-		grid-template-columns: 40px 1fr 40px;
+		grid-template-columns: 32px 1fr 32px;
 		align-items: center;
 		margin-bottom: 16px;
 		text-align: center;
 		text-transform: capitalize;
+
+		.button {
+			width: 32px;
+			min-height: 32px;
+			height: 32px;
+			padding: 0;
+			border-radius: 50%;
+			line-height: 1;
+		}
 	}
 
 	&__cal-grid {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: 6px;
+		gap: 4px;
 	}
 
 	&__cal-weekday {
+		padding-bottom: 4px;
 		text-align: center;
 		color: var(--wpbac-muted);
 		font-size: 12px;
@@ -245,50 +351,58 @@
 		position: relative;
 		aspect-ratio: 1;
 		padding: 0;
-		border: 1px solid var(--wpbac-border);
-		border-radius: 6px;
-		background: #fff;
-		color: var(--wpbac-text);
+		border: 0;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--wpbac-primary) 12%, transparent);
+		color: var(--wpbac-primary);
+		font-size: 13px;
+		font-weight: 600;
 		cursor: pointer;
 
-		&:hover:not(:disabled) {
-			border-color: var(--wpbac-primary);
+		&:hover:not(:disabled),
+		&:focus-visible {
+			background: color-mix(in srgb, var(--wpbac-primary) 25%, transparent);
 		}
 
 		&:disabled {
-			border-color: transparent;
 			background: transparent;
 			color: #a7aaad;
+			font-weight: 400;
 			cursor: default;
 		}
 
 		&.is-today {
-			font-weight: 700;
-			box-shadow: inset 0 0 0 1px var(--wpbac-primary);
+			box-shadow: inset 0 0 0 2px var(--wpbac-primary);
 		}
 
-		&.is-blocked {
-			border-color: var(--wpbac-danger);
+		&.is-blocked,
+		&.is-blocked:hover {
 			background: var(--wpbac-danger);
 			color: #fff;
 		}
 
-		&.is-inherited {
-			border-color: #f0b6b7;
+		// Bloccato per tutti i tipi di call: visibile ma non modificabile da qui.
+		&.is-inherited:disabled {
 			background: #fcf0f1;
 			color: #b32d2e;
+			font-weight: 600;
 		}
 
 		// Puntino: ci sono prenotazioni confermate quel giorno.
 		&.has-booking::after {
 			content: "";
 			position: absolute;
-			right: 5px;
-			bottom: 5px;
-			width: 6px;
-			height: 6px;
+			bottom: 4px;
+			left: 50%;
+			width: 5px;
+			height: 5px;
+			margin-left: -2.5px;
 			border-radius: 50%;
 			background: var(--wpbac-success);
+		}
+
+		&.is-blocked.has-booking::after {
+			background: #fff;
 		}
 	}
 
@@ -296,7 +410,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 8px 16px;
+		gap: 8px 24px;
 		margin: 24px 0 0;
 		color: var(--wpbac-muted);
 	}
@@ -309,15 +423,14 @@
 		display: inline-block;
 		width: 12px;
 		height: 12px;
-		margin-right: -8px;
-		border-radius: 3px;
+		margin-right: -16px;
+		border-radius: 50%;
 
 		&.is-blocked {
 			background: var(--wpbac-danger);
 		}
 
 		&.has-booking {
-			border-radius: 50%;
 			background: var(--wpbac-success);
 		}
 	}
@@ -331,12 +444,20 @@
 		list-style: none;
 	}
 
+	&__chip .components-button {
+		min-width: 24px;
+		height: 24px;
+		padding: 0;
+		justify-content: center;
+		text-decoration: none;
+	}
+
 	&__chip {
 		display: inline-flex;
 		align-items: center;
-		gap: 10px;
+		gap: 12px;
 		margin: 0;
-		padding: 6px 8px 6px 14px;
+		padding: 6px 8px 6px 16px;
 		border: 1px solid var(--wpbac-border);
 		border-radius: 999px;
 		background: #f6f7f7;

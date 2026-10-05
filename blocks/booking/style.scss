@@ -161,7 +161,7 @@
 	&__slot-list {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 6px;
+		gap: 8px;
 		max-height: 340px;
 		overflow-y: auto;
 		padding-right: 2px;
@@ -209,11 +209,11 @@
 
 	&__form {
 		display: grid;
-		gap: 16px;
+		gap: 20px;
 
 		label {
 			display: grid;
-			gap: 4px;
+			gap: 6px;
 		}
 
 		input[type="text"],
@@ -232,7 +232,7 @@
 	&__check {
 		display: flex !important;
 		align-items: flex-start;
-		gap: 8px;
+		gap: 10px;
 	}
 
 	// Honeypot fuori schermo (non display:none, che alcuni bot riconoscono).
@@ -247,8 +247,8 @@
 	&__buttons {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
-		margin-top: 8px;
+		gap: 12px;
+		margin-top: 16px;
 	}
 
 	&__error {
@@ -257,7 +257,7 @@
 	}
 
 	&__when {
-		margin: 0 0 16px;
+		margin: 0 0 20px;
 	}
 }
 
@@ -333,7 +333,7 @@ body.wpbac-modal-open {
 	}
 
 	&__title {
-		margin: 0 32px 16px 0;
+		margin: 0 32px 20px 0;
 		font-size: 1.25em;
 	}
 

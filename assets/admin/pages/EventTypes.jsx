@@ -1,5 +1,5 @@
 import { useEffect, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import {
 	Button,
 	Notice,
@@ -10,8 +10,9 @@ import {
 	ToggleControl,
 } from '@wordpress/components';
 import { api } from '../api';
-import { activeDays, defaultMap, formatDays } from '../availability';
+import { activeDays, defaultMap, firstRanges, formatDays } from '../availability';
 import Availability from '../components/Availability';
+import Actions from '../components/Actions';
 import Section from '../components/Section';
 
 const newType = () => ( {
@@ -35,6 +36,20 @@ const LOCATIONS = {
 	meet: 'Google Meet',
 	phone: __( 'Telefono', 'wp-book-a-call' ),
 	custom: __( 'Altro', 'wp-book-a-call' ),
+};
+
+/** Regole principali di un tipo di call, su due righe: quelle impostate soltanto. */
+const rules = ( t ) => {
+	const spacing = [
+		sprintf( __( 'Orari ogni %d min', 'wp-book-a-call' ), t.slot_step_min ),
+		t.buffer_before_min > 0 && sprintf( __( 'pausa prima %d min', 'wp-book-a-call' ), t.buffer_before_min ),
+		t.buffer_after_min > 0 && sprintf( __( 'pausa dopo %d min', 'wp-book-a-call' ), t.buffer_after_min ),
+	];
+	const limits = [
+		sprintf( __( 'Preavviso %d h', 'wp-book-a-call' ), t.min_notice_hours ),
+		sprintf( __( 'fino a %d giorni', 'wp-book-a-call' ), t.max_days_ahead ),
+	];
+	return [ spacing, limits ].map( ( line ) => line.filter( Boolean ).join( ' · ' ) );
 };
 
 /** Editor delle domande personalizzate. */
@@ -77,9 +92,11 @@ function Questions( { value, onChange } ) {
 					</Button>
 				</div>
 			) ) }
-			<Button variant="secondary" onClick={ () => onChange( [ ...value, { label: '', type: 'text', required: false } ] ) }>
-				{ __( 'Aggiungi domanda', 'wp-book-a-call' ) }
-			</Button>
+			<Actions>
+				<Button variant="secondary" onClick={ () => onChange( [ ...value, { label: '', type: 'text', required: false } ] ) }>
+					{ __( 'Aggiungi domanda', 'wp-book-a-call' ) }
+				</Button>
+			</Actions>
 		</>
 	);
 }
@@ -225,34 +242,73 @@ export default function EventTypes() {
 				title={ __( 'Tipi di call', 'wp-book-a-call' ) }
 				description={ __( 'Ogni tipo di call ha durata, disponibilità e domande proprie. Il blocco nella pagina mostra quello scelto.', 'wp-book-a-call' ) }
 			>
-				<Button variant="primary" onClick={ () => setEditing( newType() ) }>
-					{ __( 'Nuovo tipo di call', 'wp-book-a-call' ) }
-				</Button>
+				<Actions>
+					<Button variant="primary" onClick={ () => setEditing( newType() ) }>
+						{ __( 'Nuovo tipo di call', 'wp-book-a-call' ) }
+					</Button>
+				</Actions>
 				{ null === types && <Spinner /> }
-				<div className="wpbac-admin__list">
-					{ types?.map( ( t ) => (
-						<div className="wpbac-admin__item" key={ t.id }>
-							<div>
-								<strong>{ t.title }</strong>
-								{ ! t.active && <span className="wpbac-admin__badge is-cancelled">{ __( 'Disattivo', 'wp-book-a-call' ) }</span> }
-								<p className="wpbac-admin__meta">
-									{ t.duration_min } min · { formatDays( activeDays( t.weekly_hours ) ) } · { LOCATIONS[ t.location_type ] } · <code>{ t.slug }</code>
-								</p>
-							</div>
-							<div className="wpbac-admin__item-actions">
-								<Button variant="secondary" onClick={ () => setEditing( t ) }>
-									{ __( 'Modifica', 'wp-book-a-call' ) }
-								</Button>
-								<Button variant="tertiary" onClick={ () => duplicate( t ) }>
-									{ __( 'Duplica', 'wp-book-a-call' ) }
-								</Button>
-								<Button variant="tertiary" isDestructive onClick={ () => remove( t ) }>
-									{ confirmId === t.id ? __( 'Confermi?', 'wp-book-a-call' ) : __( 'Elimina', 'wp-book-a-call' ) }
-								</Button>
-							</div>
-						</div>
-					) ) }
-				</div>
+				{ types && 0 === types.length && (
+					<p className="wpbac-admin__empty">{ __( 'Nessun tipo di call: creane uno per attivare le prenotazioni.', 'wp-book-a-call' ) }</p>
+				) }
+				{ types && types.length > 0 && (
+					<table className="wp-list-table widefat striped wpbac-admin__table wpbac-admin__table--types">
+						<thead>
+							<tr>
+								<th>{ __( 'Tipo di call', 'wp-book-a-call' ) }</th>
+								<th>{ __( 'Durata', 'wp-book-a-call' ) }</th>
+								<th>{ __( 'Disponibilità', 'wp-book-a-call' ) }</th>
+								<th>{ __( 'Luogo', 'wp-book-a-call' ) }</th>
+								<th>{ __( 'Regole', 'wp-book-a-call' ) }</th>
+								<th>{ __( 'Stato', 'wp-book-a-call' ) }</th>
+								<th />
+							</tr>
+						</thead>
+						<tbody>
+							{ types.map( ( t ) => (
+								<tr key={ t.id }>
+									<td>
+										<strong>{ t.title }</strong>
+										<br />
+										<code>{ t.slug }</code>
+									</td>
+									<td>{ t.duration_min } min</td>
+									<td>
+										<strong>{ formatDays( activeDays( t.weekly_hours ) ) }</strong>
+										<br />
+										<span className="wpbac-admin__meta">{ firstRanges( t.weekly_hours ).map( ( r ) => `${ r[ 0 ] }-${ r[ 1 ] }` ).join( ', ' ) || '–' }</span>
+									</td>
+									<td>{ LOCATIONS[ t.location_type ] }</td>
+									<td>
+										<ul className="wpbac-admin__rules">
+											{ rules( t ).map( ( line ) => (
+												<li key={ line }>{ line }</li>
+											) ) }
+										</ul>
+									</td>
+									<td>
+										<span className={ `wpbac-admin__badge ${ t.active ? 'is-confirmed' : 'is-cancelled' }` }>
+											{ t.active ? __( 'Attivo', 'wp-book-a-call' ) : __( 'Disattivo', 'wp-book-a-call' ) }
+										</span>
+									</td>
+									<td>
+										<div className="wpbac-admin__row-actions">
+											<Button variant="secondary" size="compact" onClick={ () => setEditing( t ) }>
+												{ __( 'Modifica', 'wp-book-a-call' ) }
+											</Button>
+											<Button variant="tertiary" size="compact" onClick={ () => duplicate( t ) }>
+												{ __( 'Duplica', 'wp-book-a-call' ) }
+											</Button>
+											<Button variant="tertiary" size="compact" isDestructive onClick={ () => remove( t ) }>
+												{ confirmId === t.id ? __( 'Confermi?', 'wp-book-a-call' ) : __( 'Elimina', 'wp-book-a-call' ) }
+											</Button>
+										</div>
+									</td>
+								</tr>
+							) ) }
+						</tbody>
+					</table>
+				) }
 			</Section>
 		</div>
 	);

@@ -17,13 +17,14 @@ defined( 'ABSPATH' ) || exit;
 final class Token {
 
 	/**
-	 * Genera un token casuale e il relativo hash.
+	 * Token di gestione di una prenotazione, derivato (HMAC) da id e salt di WordPress.
+	 * Essendo ricalcolabile, si può rimettere nei link dei promemoria senza conservarlo in chiaro.
 	 *
-	 * @return array{0:string,1:string} Token in chiaro e hash.
+	 * @param int $booking_id Id della prenotazione.
+	 * @return string
 	 */
-	public static function generate(): array {
-		$plain = bin2hex( random_bytes( 32 ) );
-		return array( $plain, self::hash( $plain ) );
+	public static function for_booking( int $booking_id ): string {
+		return hash_hmac( 'sha256', 'manage:' . $booking_id, wp_salt( 'auth' ) );
 	}
 
 	/**

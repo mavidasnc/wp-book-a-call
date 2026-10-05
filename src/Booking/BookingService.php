@@ -70,8 +70,6 @@ final class BookingService {
 		$start = (int) ( $input['start_ts'] ?? 0 );
 		$end   = $start + $event_type['duration_min'] * 60;
 
-		list( $token, $token_hash ) = Token::generate();
-
 		// Il lock serializza controllo e inserimento: due richieste sullo stesso slot non passano entrambe.
 		if ( ! $this->bookings->acquire_lock() ) {
 			return new \WP_Error( 'wpbac_busy', __( 'Il sistema è occupato, riprova tra un istante.', 'wp-book-a-call' ), array( 'status' => 503 ) );
@@ -90,14 +88,18 @@ final class BookingService {
 					'email'         => $email,
 					'timezone'      => $this->valid_timezone( (string) ( $input['timezone'] ?? '' ) ),
 					'answers'       => $answers,
-					'token_hash'    => $token_hash,
+					'token_hash'    => '', // Si calcola dopo, quando l'id è noto.
 					'source_url'    => $this->safe_url( (string) ( $input['source_url'] ?? '' ) ),
 					'ip_hash'       => RateLimiter::client_hash(),
-				)
+				) + $this->reminder_flags( $start )
 			);
 		} finally {
 			$this->bookings->release_lock();
 		}
+
+		// Il token è derivato dall'id: serve anche ai promemoria, che non lo trovano in chiaro nel database.
+		$token = Token::for_booking( $id );
+		$this->bookings->update( $id, array( 'token_hash' => Token::hash( $token ) ) );
 
 		// Evento Google (con Meet): se fallisce la prenotazione resta valida.
 		if ( $this->calendar->is_connected() ) {
@@ -206,7 +208,7 @@ final class BookingService {
 					'start_ts'     => $start_ts,
 					'end_ts'       => $end,
 					'ics_sequence' => $booking['ics_sequence'] + 1,
-				)
+				) + $this->reminder_flags( $start_ts )
 			);
 		} finally {
 			$this->bookings->release_lock();
@@ -223,6 +225,22 @@ final class BookingService {
 		do_action( 'wpbac_booking_rescheduled', $booking, $event_type );
 
 		return $booking;
+	}
+
+	/**
+	 * Flag "promemoria già inviato" per un orario di inizio.
+	 * Se la call è troppo vicina per un promemoria utile (prenotata a meno di 24 ore o 1 ora dall'inizio,
+	 * più un margine di 15 minuti) il flag parte già a 1, così non arriva subito dopo la conferma.
+	 *
+	 * @param int $start_ts Inizio della call.
+	 * @return array{reminder_24_sent:int,reminder_1_sent:int}
+	 */
+	private function reminder_flags( int $start_ts ): array {
+		$left = $start_ts - time();
+		return array(
+			'reminder_24_sent' => $left <= DAY_IN_SECONDS + 15 * MINUTE_IN_SECONDS ? 1 : 0,
+			'reminder_1_sent'  => $left <= HOUR_IN_SECONDS + 15 * MINUTE_IN_SECONDS ? 1 : 0,
+		);
 	}
 
 	/**

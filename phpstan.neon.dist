@@ -3,6 +3,9 @@ includes:
 
 parameters:
     level: 6
+    ignoreErrors:
+        # plugin-update-checker restituisce tipi generici: i metodi esistono a runtime.
+        - '#Call to an undefined method .+::(getUpdate|checkForUpdates|getUpdateState|enableReleaseAssets)\(\)#'
     paths:
         - src
         - wp-book-a-call.php

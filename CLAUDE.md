@@ -11,7 +11,7 @@ npm run build:zip        # build + composer --no-dev + zip in zip/ + ripristino 
 composer lint            # phpcs (deve restare a zero errori e warning)
 composer analyze         # phpstan livello 6
 composer test            # phpunit (tests/Unit)
-npm run release:minor    # release: bump versione, zip, tag, push, GitHub Release (serve CHANGELOG [x.y.z])
+npm run release:minor    # bump versione, commit, tag, push: la release la costruisce il workflow GitHub Actions (--local per farla da qui)
 ```
 
 Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tooling), mentre la build sì.
@@ -36,3 +36,7 @@ Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tool
 - Gli aggiornamenti automatici passano da `Support/Updater.php` (plugin-update-checker + release asset): il repo GitHub `mavidasnc/wp-book-a-call` deve restare pubblico.
 - Disponibilità: il backend salva una mappa per giorno, l'admin la edita come "fasce comuni + giorni attivi" (`assets/admin/availability.js`).
 - Eccezioni: `ExceptionRepository::toggle()` riscrive gli intervalli di un ambito usando `Availability/DateRanges` (unione e divisione, testata).
+- Promemoria: `Reminders/ReminderService` (cron `wpbac_send_reminders` ogni 15 min); i flag `reminder_24_sent`/`reminder_1_sent` evitano invii doppi o promemoria subito dopo la conferma. Il token di gestione è `Token::for_booking($id)` (derivato, ricalcolabile).
+- Webhook: `Webhook/WebhookSender` agganciato alle azioni `wpbac_booking_*`, non bloccante, firma HMAC in `X-Wpbac-Signature`.
+- Aggiornamenti dall'admin: `REST/UpdateController` + `Support/Updater` (PUC); l'installazione usa `Plugin_Upgrader`.
+- Verifica visiva dell'admin senza login: harness locale con gli script core scaricati da `load-scripts.php` e le API simulate (vedi la cartella di lavoro della sessione, non è nel repo).

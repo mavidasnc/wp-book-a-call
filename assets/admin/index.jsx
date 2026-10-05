@@ -5,6 +5,7 @@ import Bookings from './pages/Bookings';
 import EventTypes from './pages/EventTypes';
 import Exceptions from './pages/Exceptions';
 import Settings from './pages/Settings';
+import Updates from './pages/Updates';
 import './styles/admin.scss';
 
 const TABS = [
@@ -12,6 +13,7 @@ const TABS = [
 	{ name: 'types', title: __( 'Tipi di call', 'wp-book-a-call' ) },
 	{ name: 'exceptions', title: __( 'Eccezioni', 'wp-book-a-call' ) },
 	{ name: 'settings', title: __( 'Impostazioni', 'wp-book-a-call' ) },
+	{ name: 'updates', title: __( 'Aggiornamenti', 'wp-book-a-call' ) },
 ];
 
 function App() {
@@ -35,6 +37,8 @@ function App() {
 							return <Exceptions />;
 						case 'settings':
 							return <Settings />;
+						case 'updates':
+							return <Updates />;
 						default:
 							return <Bookings />;
 					}

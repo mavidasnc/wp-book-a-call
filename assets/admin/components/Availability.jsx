@@ -1,6 +1,7 @@
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Button, TextControl } from '@wordpress/components';
+import Actions from './Actions';
 import { DAYS, activeDays, buildMap, firstRanges, formatDays } from '../availability';
 
 /**
@@ -68,9 +69,11 @@ export default function Availability( { value, onChange } ) {
 					</Button>
 				</div>
 			) ) }
-			<Button variant="secondary" onClick={ () => update( days, [ ...ranges, [ '09:00', '12:00' ] ] ) }>
-				{ __( 'Aggiungi fascia', 'wp-book-a-call' ) }
-			</Button>
+			<Actions>
+				<Button variant="secondary" onClick={ () => update( days, [ ...ranges, [ '09:00', '12:00' ] ] ) }>
+					{ __( 'Aggiungi fascia', 'wp-book-a-call' ) }
+				</Button>
+			</Actions>
 
 			<p className="wpbac-admin__summary">
 				{ days.length && ranges.length

@@ -60,6 +60,7 @@ require_once $wpbac_autoload;
 
 // Hook di attivazione: deve stare nel file principale (non dentro un altro hook).
 register_activation_hook( __FILE__, array( 'Mavida\\BookACall\\Activator', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'Mavida\\BookACall\\Deactivator', 'deactivate' ) );
 
 // Inizializzazione su plugins_loaded per garantire che tutti i plugin siano caricati.
 add_action(

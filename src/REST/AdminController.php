@@ -16,6 +16,7 @@ use Mavida\BookACall\Database\ExceptionRepository;
 use Mavida\BookACall\Email\EmailSender;
 use Mavida\BookACall\Google\OAuthClient;
 use Mavida\BookACall\Support\Settings;
+use Mavida\BookACall\Webhook\WebhookSender;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -33,6 +34,7 @@ final class AdminController extends RestController {
 	 * @param BookingService      $service    Servizio prenotazioni.
 	 * @param EmailSender         $emails     Email.
 	 * @param OAuthClient         $oauth      OAuth Google.
+	 * @param WebhookSender       $webhook    Webhook.
 	 */
 	public function __construct(
 		private readonly EventTypeRepository $types,
@@ -40,7 +42,8 @@ final class AdminController extends RestController {
 		private readonly ExceptionRepository $exceptions,
 		private readonly BookingService $service,
 		private readonly EmailSender $emails,
-		private readonly OAuthClient $oauth
+		private readonly OAuthClient $oauth,
+		private readonly WebhookSender $webhook
 	) {}
 
 	/**
@@ -160,6 +163,15 @@ final class AdminController extends RestController {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'send_test_email' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/settings/test-webhook',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'send_test_webhook' ),
 				'permission_callback' => $admin,
 			)
 		);
@@ -312,6 +324,47 @@ final class AdminController extends RestController {
 			return new \WP_Error( 'wpbac_mail', __( 'Invio non riuscito: controlla i destinatari e la configurazione email del sito.', 'wp-book-a-call' ), array( 'status' => 500 ) );
 		}
 		return $this->respond( array( 'sent' => true ) );
+	}
+
+	/**
+	 * Invia al webhook un evento di esempio e riporta la risposta del server.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function send_test_webhook() {
+		if ( '' === (string) Settings::get( 'webhook_url' ) ) {
+			return new \WP_Error( 'wpbac_webhook', __( 'Salva prima l\'URL del webhook.', 'wp-book-a-call' ), array( 'status' => 400 ) );
+		}
+
+		$booking = array(
+			'id'       => 0,
+			'status'   => 'confirmed',
+			'start_ts' => time() + DAY_IN_SECONDS,
+			'end_ts'   => time() + DAY_IN_SECONDS + 1800,
+			'name'     => 'Mario Rossi (prova)',
+			'email'    => 'test@example.com',
+			'timezone' => wp_timezone_string(),
+			'meet_url' => '',
+			'answers'  => array(),
+		);
+		$type    = array(
+			'id'            => 0,
+			'slug'          => 'prova',
+			'title'         => 'Evento di prova',
+			'duration_min'  => 30,
+			'location_type' => 'meet',
+			'questions'     => array(),
+		);
+
+		$result = $this->webhook->dispatch( 'booking.test', $booking, $type, true );
+		if ( is_wp_error( $result ) ) {
+			return new \WP_Error( 'wpbac_webhook', $result->get_error_message(), array( 'status' => 502 ) );
+		}
+		if ( $result < 200 || $result >= 300 ) {
+			/* translators: %d: codice HTTP. */
+			return new \WP_Error( 'wpbac_webhook', sprintf( __( 'Il webhook ha risposto con HTTP %d.', 'wp-book-a-call' ), $result ), array( 'status' => 502 ) );
+		}
+		return $this->respond( array( 'status' => $result ) );
 	}
 
 	/**

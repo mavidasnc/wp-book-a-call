@@ -158,6 +158,40 @@ final class BookingRepository {
 	}
 
 	/**
+	 * Prenotazioni confermate per cui è ora di inviare un promemoria.
+	 *
+	 * @param string $kind '24' (24 ore prima) o '1' (1 ora prima).
+	 * @param int    $now  Timestamp corrente.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function due_reminders( string $kind, int $now ): array {
+		global $wpdb;
+		$table  = Schema::table( 'bookings' );
+		$column = '1' === $kind ? 'reminder_1_sent' : 'reminder_24_sent';
+		$window = '1' === $kind ? HOUR_IN_SECONDS : DAY_IN_SECONDS;
+		$rows   = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE status = 'confirmed' AND {$column} = 0 AND start_ts > %d AND start_ts <= %d",
+				$now,
+				$now + $window
+			),
+			ARRAY_A
+		);
+		return array_map( array( $this, 'hydrate' ), $rows ? $rows : array() );
+	}
+
+	/**
+	 * Segna un promemoria come inviato.
+	 *
+	 * @param int    $id   Id della prenotazione.
+	 * @param string $kind '24' o '1'.
+	 * @return void
+	 */
+	public function mark_reminder( int $id, string $kind ): void {
+		$this->update( $id, array( '1' === $kind ? 'reminder_1_sent' : 'reminder_24_sent' => 1 ) );
+	}
+
+	/**
 	 * Decodifica e converte una riga.
 	 *
 	 * @param array<string,mixed> $row Riga grezza.

@@ -1,0 +1,62 @@
+name: Release
+
+# Quando si pubblica un tag vX.Y.Z costruisce lo zip del plugin e lo allega alla release di GitHub.
+# L'updater del plugin (plugin-update-checker) installa proprio quello zip.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verifica che il tag coincida con la versione del plugin
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "v${VERSION}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Il tag ${GITHUB_REF_NAME} non coincide con la versione ${VERSION} di package.json" >&2
+            exit 1
+          fi
+          if ! grep -q "Version:           ${VERSION}" wp-book-a-call.php; then
+            echo "La versione nell'header di wp-book-a-call.php non coincide con ${VERSION}" >&2
+            exit 1
+          fi
+
+      - name: Dipendenze PHP (solo produzione)
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Dipendenze JS e build
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Crea lo zip
+        run: node scripts/build-zip.js
+
+      - name: Pubblica la release con lo zip allegato
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ZIP="zip/wp-book-a-call-${GITHUB_REF_NAME#v}.zip"
+          NOTES="Vedi [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md) per i dettagli delle modifiche."
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${ZIP}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${ZIP}" --title "${GITHUB_REF_NAME}" --notes "${NOTES}"
+          fi
