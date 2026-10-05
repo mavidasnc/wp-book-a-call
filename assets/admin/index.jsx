@@ -7,6 +7,8 @@ import Exceptions from './pages/Exceptions';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Updates from './pages/Updates';
+// Gli stili del widget servono al selettore dello spostamento (stesso aspetto del sito).
+import './styles/widget.scss';
 import './styles/admin.scss';
 
 const TABS = [

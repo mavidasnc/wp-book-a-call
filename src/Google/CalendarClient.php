@@ -102,6 +102,23 @@ final class CalendarClient {
 				),
 			),
 		);
+		// Promemoria sul calendario dell'organizzatore (0 = predefiniti del calendario).
+		$minutes = (int) Settings::get( 'google_reminder_minutes' );
+		if ( $minutes > 0 ) {
+			$body['reminders'] = array(
+				'useDefault' => false,
+				'overrides'  => array(
+					array(
+						'method'  => 'popup',
+						'minutes' => $minutes,
+					),
+					array(
+						'method'  => 'email',
+						'minutes' => $minutes,
+					),
+				),
+			);
+		}
 		if ( $meet ) {
 			$body['conferenceData'] = array(
 				'createRequest' => array(

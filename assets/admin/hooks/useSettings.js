@@ -1,5 +1,5 @@
 import { useEffect, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../api';
 
 /**
@@ -26,6 +26,22 @@ export default function useSettings() {
 			.then( ( data ) => {
 				if ( data && undefined !== data.google_connected ) {
 					setS( data );
+				}
+				// Dopo il salvataggio di una chiave Resend l'esito della prova ha la precedenza sul messaggio generico.
+				if ( data?.resend_test ) {
+					setNotice(
+						data.resend_test.ok
+							? { status: 'success', text: data.resend_test.message }
+							: {
+									status: 'error',
+									text: sprintf(
+										/* translators: %s: errore restituito da Resend. */
+										__( 'Resend non funziona: %s. Le email useranno WordPress finché non risolvi.', 'wp-book-a-call' ),
+										data.resend_test.message
+									),
+							  }
+					);
+					return;
 				}
 				setNotice( { status: 'success', text: okText } );
 			} )

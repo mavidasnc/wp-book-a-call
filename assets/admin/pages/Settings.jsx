@@ -1,6 +1,6 @@
 import { useEffect, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
-import { Button, Notice, Spinner, TextControl, ToggleControl } from '@wordpress/components';
+import { Button, Notice, Spinner, TextControl, TextareaControl, ToggleControl } from '@wordpress/components';
 import { api } from '../api';
 import Actions from '../components/Actions';
 import GoogleGuide from '../components/GoogleGuide';
@@ -127,6 +127,14 @@ export default function Settings() {
 						onChange={ set( 'google_calendar_id' ) }
 					/>
 				</div>
+				<TextControl
+					type="number"
+					min="0"
+					label={ __( 'Promemoria sul tuo calendario (minuti prima)', 'wp-book-a-call' ) }
+					help={ __( 'Vale solo per te, non per il cliente (che riceve i promemoria via email). 0 = promemoria predefiniti del calendario. Si applica ai nuovi eventi.', 'wp-book-a-call' ) }
+					value={ s.google_reminder_minutes }
+					onChange={ ( v ) => set( 'google_reminder_minutes' )( parseInt( v, 10 ) || 0 ) }
+				/>
 				<ToggleControl label={ __( 'Escludi gli orari già occupati nel calendario', 'wp-book-a-call' ) } checked={ s.google_use_busy } onChange={ set( 'google_use_busy' ) } />
 				<ToggleControl label={ __( 'Crea un evento con link Google Meet per ogni prenotazione', 'wp-book-a-call' ) } checked={ s.google_use_meet } onChange={ set( 'google_use_meet' ) } />
 				<Actions>
@@ -156,6 +164,18 @@ export default function Settings() {
 					value={ s.privacy_url }
 					onChange={ set( 'privacy_url' ) }
 				/>
+				<TextareaControl
+					rows={ 9 }
+					label={ __( 'Testo dell\'informativa (usato se manca l\'URL)', 'wp-book-a-call' ) }
+					help={ __( 'Appare sotto la casella di consenso solo quando l\'URL qui sopra è vuoto. Segnaposto: {host} organizzatore, {site} nome del sito, {admin_email} email di contatto. È un modello generico: fallo rivedere prima di usarlo.', 'wp-book-a-call' ) }
+					value={ s.privacy_text }
+					onChange={ set( 'privacy_text' ) }
+				/>
+				<Actions>
+					<Button variant="secondary" onClick={ () => set( 'privacy_text' )( s.default_privacy ) }>
+						{ __( 'Ripristina il testo standard', 'wp-book-a-call' ) }
+					</Button>
+				</Actions>
 				<ToggleControl
 					label={ __( 'Elimina tutti i dati alla disinstallazione del plugin', 'wp-book-a-call' ) }
 					help={ __( 'Attenzione: cancella tipi di call, prenotazioni e impostazioni.', 'wp-book-a-call' ) }

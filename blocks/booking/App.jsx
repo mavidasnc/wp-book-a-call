@@ -24,7 +24,7 @@ function When( { start, tz } ) {
 
 /** Form dei dati del cliente, mostrato nella modale. */
 function Form( { config, start, tz, onBack, onDone, onConflict } ) {
-	const { event, privacyUrl, apiRoot } = config;
+	const { event, privacyUrl, privacyText, apiRoot } = config;
 	const startedAt = useRef( Date.now() );
 	const [ values, setValues ] = useState( { name: '', email: '', website: '', privacy: false, answers: {} } );
 	const [ error, setError ] = useState( '' );
@@ -105,6 +105,7 @@ function Form( { config, start, tz, onBack, onDone, onConflict } ) {
 					) }
 				</span>
 			</label>
+			{ privacyText && <p className="wpbac-booking__privacy">{ privacyText }</p> }
 			{ error && (
 				<p className="wpbac-booking__error" role="alert">
 					{ error }

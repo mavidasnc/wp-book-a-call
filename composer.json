@@ -47,6 +47,11 @@
         "lint": "phpcs",
         "lint:fix": "phpcbf",
         "analyze": "phpstan analyse --memory-limit=1G",
-        "test": "phpunit"
+        "test": "phpunit",
+        "ci": [
+            "@lint",
+            "@analyze",
+            "@test"
+        ]
     }
 }

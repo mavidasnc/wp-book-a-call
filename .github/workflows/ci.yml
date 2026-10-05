@@ -1,0 +1,57 @@
+name: CI
+
+# Lint, analisi statica, test e controllo dei file compilati: a ogni push su main, a ogni pull request
+# e come passo obbligatorio prima della pubblicazione di una release (vedi release.yml).
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP (lint, PHPStan, PHPUnit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+
+      - name: Dipendenze PHP
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Coding standard (WPCS)
+        run: composer lint
+
+      - name: Analisi statica (PHPStan)
+        run: composer analyze
+
+      - name: Test unitari (PHPUnit)
+        run: composer test
+
+  js:
+    name: JS (build e controllo file compilati)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dipendenze JS
+        run: npm ci --ignore-scripts
+
+      - name: Build
+        run: npm run build
+
+      - name: Controllo dei file compilati
+        run: node scripts/check-build.js

@@ -1,58 +1,31 @@
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
-import { Button, Modal, Notice, SelectControl, Spinner } from '@wordpress/components';
+import { Button, Modal, Notice } from '@wordpress/components';
+import Picker from '../../../blocks/booking/Picker';
 import { api, formatDate, siteTimezone } from '../api';
 
-/** Data Y-m-d di un timestamp nel fuso del sito. */
-const dayOf = ( ts ) => new Intl.DateTimeFormat( 'en-CA', { timeZone: siteTimezone } ).format( new Date( ts * 1000 ) );
-
-const dayLabel = ( ts ) =>
-	new Intl.DateTimeFormat( 'it-IT', {
-		timeZone: siteTimezone,
-		weekday: 'long',
-		day: 'numeric',
-		month: 'long',
-		year: 'numeric',
-	} ).format( new Date( ts * 1000 ) );
-
-const timeLabel = ( ts ) =>
-	new Intl.DateTimeFormat( 'it-IT', { timeZone: siteTimezone, hour: '2-digit', minute: '2-digit' } ).format( new Date( ts * 1000 ) );
-
 /**
- * Modale per spostare una prenotazione: l'amministratore sceglie giorno e orario tra quelli liberi,
- * il plugin aggiorna Google Calendar e avvisa il cliente via email.
+ * Modale per spostare una prenotazione, con lo stesso selettore del sito:
+ * due mesi affiancati, orari del giorno scelto e conferma finale.
+ * Il plugin aggiorna Google Calendar e avvisa il cliente via email.
  */
 export default function RescheduleModal( { booking, onClose, onDone } ) {
-	const [ data, setData ] = useState( null );
-	const [ day, setDay ] = useState( '' );
-	const [ time, setTime ] = useState( '' );
+	const [ time, setTime ] = useState( 0 );
+	const [ notifyClient, setNotifyClient ] = useState( true );
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
 
-	// Orari liberi dei prossimi due mesi (la prenotazione stessa non occupa il suo vecchio orario).
-	useEffect( () => {
-		const from = dayOf( Date.now() / 1000 );
-		const to = dayOf( Date.now() / 1000 + 62 * 86400 );
-		api( `/admin/bookings/${ booking.id }/slots?from=${ from }&to=${ to }` )
-			.then( setData )
-			.catch( ( e ) => setError( e.message ) );
-	}, [ booking.id ] );
-
-	// Orari liberi raggruppati per giorno.
-	const byDay = useMemo( () => {
-		const map = {};
-		( data?.available ?? [] ).forEach( ( ts ) => {
-			( map[ dayOf( ts ) ] ??= [] ).push( ts );
+	// Orari liberi e occupati del periodo mostrato (la prenotazione stessa non occupa il suo vecchio orario).
+	const loadSlots = ( from, to ) =>
+		api( `/admin/bookings/${ booking.id }/slots?from=${ from }&to=${ to }` ).then( ( data ) => {
+			setNotifyClient( false !== data.notify_client );
+			return { slots: data.available, taken: data.taken };
 		} );
-		return map;
-	}, [ data ] );
-
-	const days = Object.keys( byDay ).sort();
 
 	const submit = () => {
 		setSaving( true );
 		setError( '' );
-		api( `/admin/bookings/${ booking.id }/reschedule`, { method: 'POST', data: { start: parseInt( time, 10 ) } } )
+		api( `/admin/bookings/${ booking.id }/reschedule`, { method: 'POST', data: { start: time } } )
 			.then( ( result ) => onDone( result ) )
 			.catch( ( e ) => {
 				setError( e.message );
@@ -61,61 +34,43 @@ export default function RescheduleModal( { booking, onClose, onDone } ) {
 	};
 
 	return (
-		<Modal title={ __( 'Sposta la call', 'wp-book-a-call' ) } onRequestClose={ onClose } className="wpbac-admin-modal">
+		<Modal title={ __( 'Sposta la call', 'wp-book-a-call' ) } onRequestClose={ onClose } className="wpbac-admin-modal is-wide">
 			<p className="wpbac-admin-modal__current">
 				<strong>{ booking.name }</strong> · { sprintf( __( 'attualmente %s', 'wp-book-a-call' ), formatDate( booking.start_ts ) ) }
 			</p>
 
-			{ ! data && ! error && <Spinner /> }
+			{ ! notifyClient && (
+				<Notice status="warning" isDismissible={ false }>
+					{ __( 'Le email al cliente sono disattivate (scheda Notifiche): lo spostamento avviene ma il cliente non riceve l\'avviso.', 'wp-book-a-call' ) }
+				</Notice>
+			) }
 			{ error && (
 				<Notice status="error" isDismissible={ false }>
 					{ error }
 				</Notice>
 			) }
 
-			{ data && (
-				<>
-					{ ! data.notify_client && (
-						<Notice status="warning" isDismissible={ false }>
-							{ __( 'Le email al cliente sono disattivate (scheda Notifiche): lo spostamento avviene ma il cliente non riceve l\'avviso.', 'wp-book-a-call' ) }
-						</Notice>
+			{ /* Stesso markup e stili del widget del sito; il contenitore abilita le regole a due mesi. */ }
+			<div className="wp-block-wpbac-booking wpbac-admin-picker">
+				<Picker tz={ siteTimezone } loadSlots={ loadSlots } selected={ time } onSelect={ setTime } />
+			</div>
+
+			<p className="wpbac-admin-modal__note">{ sprintf( __( 'Gli orari sono nel fuso del sito (%s).', 'wp-book-a-call' ), siteTimezone ) }</p>
+
+			{ time > 0 && (
+				<p className="wpbac-admin-modal__summary">
+					{ sprintf(
+						/* translators: 1: vecchio orario, 2: nuovo orario. */
+						__( 'Da %1$s a %2$s', 'wp-book-a-call' ),
+						formatDate( booking.start_ts ),
+						formatDate( time )
 					) }
-					{ 0 === days.length ? (
-						<p className="wpbac-admin__empty">{ __( 'Nessun orario libero nei prossimi due mesi.', 'wp-book-a-call' ) }</p>
-					) : (
-						<>
-							<SelectControl
-								label={ __( 'Nuovo giorno', 'wp-book-a-call' ) }
-								value={ day }
-								options={ [
-									{ value: '', label: __( 'Scegli un giorno', 'wp-book-a-call' ) },
-									...days.map( ( d ) => ( { value: d, label: dayLabel( byDay[ d ][ 0 ] ) } ) ),
-								] }
-								onChange={ ( v ) => {
-									setDay( v );
-									setTime( '' );
-								} }
-								__nextHasNoMarginBottom
-							/>
-							<SelectControl
-								label={ sprintf( __( 'Nuovo orario (%s)', 'wp-book-a-call' ), siteTimezone ) }
-								value={ time }
-								disabled={ ! day }
-								options={ [
-									{ value: '', label: __( 'Scegli un orario', 'wp-book-a-call' ) },
-									...( byDay[ day ] ?? [] ).map( ( ts ) => ( { value: String( ts ), label: timeLabel( ts ) } ) ),
-								] }
-								onChange={ setTime }
-								__nextHasNoMarginBottom
-							/>
-						</>
-					) }
-				</>
+				</p>
 			) }
 
 			<div className="wpbac-admin-modal__actions">
 				<Button variant="primary" isBusy={ saving } disabled={ ! time || saving } onClick={ submit }>
-					{ data?.notify_client === false ? __( 'Sposta', 'wp-book-a-call' ) : __( 'Sposta e avvisa il cliente', 'wp-book-a-call' ) }
+					{ notifyClient ? __( 'Conferma e avvisa il cliente', 'wp-book-a-call' ) : __( 'Conferma lo spostamento', 'wp-book-a-call' ) }
 				</Button>
 				<Button variant="tertiary" onClick={ onClose }>
 					{ __( 'Chiudi', 'wp-book-a-call' ) }

@@ -251,6 +251,12 @@
 	&__slot {
 		padding: 6px 8px;
 		font-size: 0.85em;
+
+		// Orario scelto (usato dallo spostamento nell'admin).
+		&.is-selected {
+			background: var(--wpbac-accent);
+			color: #fff;
+		}
 	}
 
 	&__primary {
@@ -294,6 +300,15 @@
 		display: flex !important;
 		align-items: flex-start;
 		gap: 10px;
+	}
+
+	// Informativa privacy standard, sotto la casella del consenso.
+	&__privacy {
+		margin: 0;
+		font-size: 12px;
+		line-height: 1.5;
+		opacity: 0.8;
+		white-space: pre-line;
 	}
 
 	// Honeypot fuori schermo (non display:none, che alcuni bot riconoscono).

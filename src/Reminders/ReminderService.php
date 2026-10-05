@@ -31,18 +31,27 @@ final class ReminderService {
 	public const HOOK = 'wpbac_send_reminders';
 
 	/**
+	 * Option con il timestamp dell'ultimo giro del cron.
+	 *
+	 * @var string
+	 */
+	public const LAST_RUN_OPTION = 'wpbac_reminders_last_run';
+
+	/**
 	 * Costruttore.
 	 *
-	 * @param BookingRepository   $bookings Prenotazioni.
-	 * @param EventTypeRepository $types    Tipi di call.
-	 * @param EmailSender         $emails   Email.
-	 * @param BookingService      $service  Servizio prenotazioni (per il link di gestione).
+	 * @param BookingRepository   $bookings  Prenotazioni.
+	 * @param EventTypeRepository $types     Tipi di call.
+	 * @param EmailSender         $emails    Email.
+	 * @param BookingService      $service   Servizio prenotazioni (per il link di gestione).
+	 * @param ReminderScheduler   $scheduler Programmazione su Resend.
 	 */
 	public function __construct(
 		private readonly BookingRepository $bookings,
 		private readonly EventTypeRepository $types,
 		private readonly EmailSender $emails,
-		private readonly BookingService $service
+		private readonly BookingService $service,
+		private readonly ReminderScheduler $scheduler
 	) {}
 
 	/**
@@ -88,6 +97,12 @@ final class ReminderService {
 	 * @return void
 	 */
 	public function run(): void {
+		// Segna l'ultimo giro: la scheda Notifiche avvisa se il cron si ferma.
+		update_option( self::LAST_RUN_OPTION, time(), false );
+
+		// Con Resend attivo programma i promemoria entrati nell'orizzonte dei 30 giorni.
+		$this->scheduler->sync_pending();
+
 		$kinds = array(
 			'24' => (bool) Settings::get( 'reminder_24h' ),
 			'1'  => (bool) Settings::get( 'reminder_1h' ),

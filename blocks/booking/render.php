@@ -8,6 +8,7 @@
  */
 
 use Mavida\BookACall\Database\EventTypeRepository;
+use Mavida\BookACall\Support\Placeholders;
 use Mavida\BookACall\Support\Settings;
 
 defined( 'ABSPATH' ) || exit;
@@ -28,12 +29,24 @@ if ( ! $wpbac_event || ! $wpbac_event['active'] ) {
 	return;
 }
 
+// Senza URL dell'informativa si mostra il testo standard, con i segnaposto sostituiti.
+$wpbac_privacy_url  = (string) Settings::get( 'privacy_url' );
+$wpbac_privacy_text = '' === $wpbac_privacy_url ? Placeholders::replace(
+	(string) Settings::get( 'privacy_text' ),
+	array(
+		'host'        => Settings::host_name(),
+		'site'        => (string) get_bloginfo( 'name' ),
+		'admin_email' => Settings::recipients() ? Settings::recipients()[0] : (string) get_option( 'admin_email' ),
+	)
+) : '';
+
 // Configurazione letta dallo script del frontend.
 $wpbac_config = array(
 	'apiRoot'              => esc_url_raw( rest_url( 'wpbac/v1' ) ),
 	'event'                => EventTypeRepository::to_public( $wpbac_event ),
 	'hostName'             => Settings::host_name(),
-	'privacyUrl'           => (string) Settings::get( 'privacy_url' ),
+	'privacyUrl'           => $wpbac_privacy_url,
+	'privacyText'          => $wpbac_privacy_text,
 	'siteTimezone'         => wp_timezone_string(),
 	'showHostInfo'         => (bool) ( $attributes['showHostInfo'] ?? true ),
 	'showTimezoneSelector' => (bool) ( $attributes['showTimezoneSelector'] ?? true ),

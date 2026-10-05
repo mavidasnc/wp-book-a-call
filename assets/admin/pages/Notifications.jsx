@@ -35,6 +35,31 @@ export default function Notifications() {
 		return <Spinner />;
 	}
 
+	// Badge di stato di Resend.
+	const resendBadge = ! s.resend_api_key_set
+		? { className: 'is-cancelled', label: __( 'Non configurato (email da WordPress)', 'wp-book-a-call' ) }
+		: s.resend?.active
+			? { className: 'is-confirmed', label: __( 'Attivo', 'wp-book-a-call' ) }
+			: { className: 'is-cancelled', label: __( 'In errore (email da WordPress)', 'wp-book-a-call' ) };
+
+	// Come vengono inviati i promemoria e se il cron gira.
+	const minutesAgo = s.reminders_last_run ? Math.round( ( Date.now() / 1000 - s.reminders_last_run ) / 60 ) : null;
+	const reminderInfo = [
+		s.resend?.active
+			? __( 'Promemoria: programmati su Resend appena arriva la prenotazione (fino a 30 giorni prima); WP-Cron resta come rete di sicurezza.', 'wp-book-a-call' )
+			: __( 'Promemoria: inviati da WP-Cron, che controlla ogni 15 minuti.', 'wp-book-a-call' ),
+		null === minutesAgo
+			? __( 'Nessun controllo eseguito finora.', 'wp-book-a-call' )
+			/* translators: %d: minuti trascorsi dall'ultimo controllo del cron. */
+			: sprintf( __( 'Ultimo controllo: %d minuti fa.', 'wp-book-a-call' ), minutesAgo ),
+	].join( ' ' );
+	let cronWarning = '';
+	if ( s.wp_cron_disabled ) {
+		cronWarning = __( 'WP-Cron è disattivato (DISABLE_WP_CRON): serve un cron di sistema che richiami wp-cron.php, altrimenti i promemoria non partono.', 'wp-book-a-call' );
+	} else if ( null !== minutesAgo && minutesAgo > 30 ) {
+		cronWarning = __( 'Il controllo dei promemoria non gira da oltre 30 minuti: se il sito riceve poche visite WP-Cron può ritardare. Con una chiave Resend i promemoria non dipendono dal cron.', 'wp-book-a-call' );
+	}
+
 	return (
 		<div className="wpbac-admin__panel">
 			{ notice && (
@@ -42,6 +67,42 @@ export default function Notifications() {
 					{ notice.text }
 				</Notice>
 			) }
+
+			<Section
+				title={ __( 'Invio email', 'wp-book-a-call' ) }
+				description={ __( 'Di base le email partono dal server di WordPress. Con una chiave API di Resend partono da Resend (più affidabile) e i promemoria vengono programmati lì.', 'wp-book-a-call' ) }
+			>
+				<p className="wpbac-admin__status">
+					{ __( 'Stato:', 'wp-book-a-call' ) }{ ' ' }
+					<span className={ `wpbac-admin__badge ${ resendBadge.className }` }>{ resendBadge.label }</span>
+				</p>
+				{ s.resend?.error && (
+					<Notice status="error" isDismissible={ false }>
+						{ sprintf(
+							/* translators: %s: errore restituito da Resend. */
+							__( 'Resend non funziona e per ora è disattivato: email e promemoria usano WordPress e WP-Cron. Errore: %s', 'wp-book-a-call' ),
+							s.resend.error
+						) }
+					</Notice>
+				) }
+				<TextControl
+					type="password"
+					label={ __( 'Chiave API di Resend', 'wp-book-a-call' ) }
+					help={ s.resend_api_key_set ? __( 'Già salvata: compila solo per sostituirla. Quando salvi, il plugin invia una email di prova.', 'wp-book-a-call' ) : __( 'Crea la chiave su resend.com. L\'email del mittente deve appartenere a un dominio verificato su Resend.', 'wp-book-a-call' ) }
+					value={ s.resend_api_key ?? '' }
+					onChange={ set( 'resend_api_key' ) }
+				/>
+				{ s.resend_api_key_set && (
+					<Actions>
+						<Button variant="secondary" onClick={ () => run( api( '/admin/resend/test', { method: 'POST' } ), __( 'Resend riattivato.', 'wp-book-a-call' ) ) }>
+							{ s.resend?.error ? __( 'Riprova', 'wp-book-a-call' ) : __( 'Prova la chiave', 'wp-book-a-call' ) }
+						</Button>
+						<Button isDestructive variant="tertiary" onClick={ () => run( api( '/admin/resend/remove', { method: 'POST' } ), __( 'Chiave rimossa: le email usano WordPress.', 'wp-book-a-call' ) ) }>
+							{ __( 'Rimuovi la chiave', 'wp-book-a-call' ) }
+						</Button>
+					</Actions>
+				) }
+			</Section>
 
 			<Section title={ __( 'Notifiche email', 'wp-book-a-call' ) } description={ __( 'Chi riceve la notifica a ogni prenotazione. L\'invito per il calendario (.ics) è allegato.', 'wp-book-a-call' ) }>
 				<ToggleControl label={ __( 'Invia una email a ogni prenotazione', 'wp-book-a-call' ) } checked={ s.notify_enabled } onChange={ set( 'notify_enabled' ) } />
@@ -73,12 +134,36 @@ export default function Notifications() {
 				</div>
 				<ToggleControl label={ __( 'Invia la conferma con .ics anche al cliente', 'wp-book-a-call' ) } checked={ s.client_email_enabled } onChange={ set( 'client_email_enabled' ) } />
 				<TextareaControl
-					label={ __( 'Messaggio di ringraziamento', 'wp-book-a-call' ) }
-					help={ __( 'Compare all\'inizio dell\'email di conferma che il cliente riceve appena prenota.', 'wp-book-a-call' ) }
+					label={ __( 'Messaggio di conferma (ringraziamento)', 'wp-book-a-call' ) }
+					help={ __( 'Compare all\'inizio dell\'email che il cliente riceve appena prenota.', 'wp-book-a-call' ) }
 					value={ s.thanks_message }
 					onChange={ set( 'thanks_message' ) }
 					rows={ 3 }
 				/>
+				<TextareaControl
+					label={ __( 'Messaggio per prenotazione spostata', 'wp-book-a-call' ) }
+					help={ __( 'Compare all\'inizio dell\'email che il cliente riceve quando la call viene spostata.', 'wp-book-a-call' ) }
+					value={ s.rescheduled_message }
+					onChange={ set( 'rescheduled_message' ) }
+					rows={ 3 }
+				/>
+				<TextareaControl
+					label={ __( 'Messaggio per prenotazione annullata', 'wp-book-a-call' ) }
+					help={ __( 'Compare all\'inizio dell\'email che il cliente riceve quando la call viene annullata.', 'wp-book-a-call' ) }
+					value={ s.cancelled_message }
+					onChange={ set( 'cancelled_message' ) }
+					rows={ 3 }
+				/>
+				<details className="wpbac-admin__guide">
+					<summary>{ __( 'Segnaposto utilizzabili nei messaggi', 'wp-book-a-call' ) }</summary>
+					<ul className="wpbac-admin__placeholders">
+						{ Object.entries( s.email_placeholders ?? {} ).map( ( [ key, description ] ) => (
+							<li key={ key }>
+								<code>{ `{${ key }}` }</code> { description }
+							</li>
+						) ) }
+					</ul>
+				</details>
 				<ToggleControl
 					label={ __( 'Promemoria al cliente 24 ore prima della call', 'wp-book-a-call' ) }
 					help={ __( 'Include il link per spostare o annullare. Non parte per le call prenotate a meno di 24 ore dall\'inizio.', 'wp-book-a-call' ) }
@@ -86,6 +171,12 @@ export default function Notifications() {
 					onChange={ set( 'reminder_24h' ) }
 				/>
 				<ToggleControl label={ __( 'Promemoria al cliente 1 ora prima della call', 'wp-book-a-call' ) } checked={ s.reminder_1h } onChange={ set( 'reminder_1h' ) } />
+				<p className="wpbac-admin__hint">{ reminderInfo }</p>
+				{ cronWarning && (
+					<Notice status="warning" isDismissible={ false }>
+						{ cronWarning }
+					</Notice>
+				) }
 				<Actions>
 					<Button
 						variant="secondary"

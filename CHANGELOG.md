@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.0]
+
+- Test su GitHub: a ogni push e pull request parte il workflow CI (phpcs, PHPStan, PHPUnit, build e controllo dei file compilati); la release dello zip parte solo se i test passano.
+- Resend: nella scheda Notifiche si può inserire la chiave API; le email partono da Resend, con una prova all'inserimento. Se Resend dà errore viene disattivato, le email usano WordPress, il proprietario del sito riceve una email e l'admin mostra un avviso con il pulsante "Riprova".
+- Promemoria: con Resend attivo vengono programmati (scheduled_at) appena arriva la prenotazione, e aggiornati se la call viene spostata o annullata; WP-Cron resta come rete di sicurezza e la scheda Notifiche mostra l'ultimo controllo e segnala un cron fermo.
+- Google Calendar: opzione per impostare un promemoria sul calendario dell'organizzatore.
+- Notifiche: messaggi personalizzabili anche per call spostata e annullata, con segnaposto ({name}, {email}, {date}, {time}, ...).
+- Privacy: testo standard dell'informativa, mostrato sotto la casella di consenso quando non c'è un URL.
+- Prenotazioni (admin): "Sposta" usa lo stesso selettore del sito (due mesi, orari del giorno, conferma).
+
 ## [0.6.1]
 
 - Correzione: il widget non mostrava gli orari occupati (lucchetto e giorni pieni) perché ignorava l'elenco ricevuto dal server.

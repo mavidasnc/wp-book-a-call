@@ -16,8 +16,11 @@ use Mavida\BookACall\Database\BookingRepository;
 use Mavida\BookACall\Database\EventTypeRepository;
 use Mavida\BookACall\Database\ExceptionRepository;
 use Mavida\BookACall\Email\EmailSender;
+use Mavida\BookACall\Email\ResendClient;
 use Mavida\BookACall\Export\BookingExporter;
 use Mavida\BookACall\Google\OAuthClient;
+use Mavida\BookACall\Reminders\ReminderService;
+use Mavida\BookACall\Support\Placeholders;
 use Mavida\BookACall\Support\Settings;
 use Mavida\BookACall\Support\Token;
 use Mavida\BookACall\Webhook\WebhookSender;
@@ -40,6 +43,7 @@ final class AdminController extends RestController {
 	 * @param OAuthClient         $oauth      OAuth Google.
 	 * @param WebhookSender       $webhook    Webhook.
 	 * @param AvailabilityService $availability Disponibilità (spostamento delle prenotazioni).
+	 * @param ResendClient        $resend     Client Resend (stato e prova della chiave).
 	 */
 	public function __construct(
 		private readonly EventTypeRepository $types,
@@ -49,7 +53,8 @@ final class AdminController extends RestController {
 		private readonly EmailSender $emails,
 		private readonly OAuthClient $oauth,
 		private readonly WebhookSender $webhook,
-		private readonly AvailabilityService $availability
+		private readonly AvailabilityService $availability,
+		private readonly ResendClient $resend
 	) {}
 
 	/**
@@ -214,6 +219,24 @@ final class AdminController extends RestController {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'send_test_webhook' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/resend/test',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'retry_resend' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/resend/remove',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'remove_resend' ),
 				'permission_callback' => $admin,
 			)
 		);
@@ -464,7 +487,75 @@ final class AdminController extends RestController {
 		// Il refresh token si ottiene solo con il flusso OAuth o dalla CLI, non dal form.
 		unset( $values['google_refresh_token'] );
 		Settings::update( $values );
+
+		$view = $this->settings_view();
+		// Con una nuova chiave Resend si fa subito una prova e si riporta l'esito.
+		if ( ! empty( $values['resend_api_key'] ) ) {
+			$view['resend_test'] = $this->resend_test_result();
+			$view                = array_merge( $view, array( 'resend' => $this->resend_view() ) );
+		}
+		return $this->respond( $view );
+	}
+
+	/**
+	 * Riprova Resend (dopo un errore) con la chiave salvata.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function retry_resend() {
+		if ( ! $this->resend->status()->has_key() ) {
+			return new \WP_Error( 'wpbac_resend', __( 'Inserisci prima la chiave API di Resend.', 'wp-book-a-call' ), array( 'status' => 400 ) );
+		}
+		$view                = $this->settings_view();
+		$view['resend_test'] = $this->resend_test_result();
+		$view['resend']      = $this->resend_view();
+		return $this->respond( $view );
+	}
+
+	/**
+	 * Rimuove la chiave Resend: i promemoria programmati tornano a WP-Cron e le email a WordPress.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function remove_resend(): \WP_REST_Response {
+		// Prima gli invii programmati (serve ancora la chiave per annullarli), poi la chiave.
+		do_action( 'wpbac_resend_disabled' );
+		Settings::update( array( 'resend_api_key' => '' ) );
+		$this->resend->status()->clear();
 		return $this->respond( $this->settings_view() );
+	}
+
+	/**
+	 * Invia la prova attraverso Resend e la riassume per l'interfaccia.
+	 *
+	 * @return array{ok:bool,message:string}
+	 */
+	private function resend_test_result(): array {
+		$result = $this->emails->test_resend();
+		if ( is_wp_error( $result ) ) {
+			return array(
+				'ok'      => false,
+				'message' => $result->get_error_message(),
+			);
+		}
+		return array(
+			'ok'      => true,
+			'message' => __( 'Resend funziona: ti ho mandato una email di prova.', 'wp-book-a-call' ),
+		);
+	}
+
+	/**
+	 * Stato di Resend per l'interfaccia.
+	 *
+	 * @return array{active:bool,error:string,since:int}
+	 */
+	private function resend_view(): array {
+		$state = $this->resend->status()->state();
+		return array(
+			'active' => $this->resend->is_active(),
+			'error'  => 'error' === $state['status'] ? ( '' !== $state['message'] ? $state['message'] : __( 'Errore sconosciuto.', 'wp-book-a-call' ) ) : '',
+			'since'  => $state['since'],
+		);
 	}
 
 	/**
@@ -545,6 +636,12 @@ final class AdminController extends RestController {
 		$settings['google_connected']    = Settings::google_connected();
 		$settings['google_redirect_uri'] = $this->oauth->redirect_uri();
 		$settings['google_auth_url']     = '' !== (string) Settings::get( 'google_client_id' ) && '' !== (string) Settings::get( 'google_client_secret' ) ? $this->oauth->auth_url() : '';
+		$settings['resend']              = $this->resend_view();
+		$settings['email_placeholders']  = Placeholders::EMAIL;
+		$settings['default_privacy']     = Settings::default_privacy_text();
+		// Stato del WP-Cron dei promemoria: ultimo giro e se il cron di WordPress è disattivato.
+		$settings['reminders_last_run'] = (int) get_option( ReminderService::LAST_RUN_OPTION, 0 );
+		$settings['wp_cron_disabled']   = defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON;
 		return $settings;
 	}
 }

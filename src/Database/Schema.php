@@ -21,7 +21,7 @@ final class Schema {
 	 *
 	 * @var string
 	 */
-	public const DB_VERSION = '2';
+	public const DB_VERSION = '3';
 
 	/**
 	 * Nome completo di una tabella del plugin.
@@ -114,6 +114,8 @@ final class Schema {
 			ip_hash varchar(64) NOT NULL DEFAULT '',
 			reminder_24_sent tinyint(1) NOT NULL DEFAULT 0,
 			reminder_1_sent tinyint(1) NOT NULL DEFAULT 0,
+			reminder_24_ref varchar(64) NOT NULL DEFAULT '',
+			reminder_1_ref varchar(64) NOT NULL DEFAULT '',
 			created_at datetime NOT NULL,
 			cancelled_at datetime NULL,
 			PRIMARY KEY  (id),

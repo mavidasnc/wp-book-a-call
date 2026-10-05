@@ -64,6 +64,12 @@ In Impostazioni: **massimo di call al giorno** (default 2, 0 = nessun limite, va
 
 Il plugin si integra con Strumenti > Esporta dati personali e Cancella dati personali. La cancellazione **anonimizza** le prenotazioni dell'email indicata (nome, email, risposte, IP, link) lasciando data e ora; le call future vengono annullate senza email e gli eventi su Google Calendar eliminati. Se è attivo un webhook, l'annullamento delle call future genera comunque l'evento `booking.cancelled`: i sistemi collegati devono occuparsi dei propri dati.
 
+Se l'URL dell'informativa è vuoto, sotto la casella di consenso compare il **testo standard** modificabile in Impostazioni (segnaposto `{host}`, `{site}`, `{admin_email}`). È un modello generico: va fatto rivedere.
+
+### Test automatici
+
+Il workflow `.github/workflows/ci.yml` esegue `composer lint`, `composer analyze`, `composer test`, la build e `node scripts/check-build.js` a ogni push e pull request; la release lo richiama e non pubblica lo zip se fallisce. In locale: `composer ci` e `npm run check`.
+
 ### Cache di pagina
 
 Le risposte REST del plugin inviano `Cache-Control: no-store` e `X-LiteSpeed-Cache-Control: no-cache`. Dopo un aggiornamento del plugin svuota la cache di pagina (il CSS del blocco è incorporato nell'HTML).
@@ -85,7 +91,10 @@ Lo script aggiorna la versione (header del plugin, `WPBAC_VERSION`, `package.jso
 
 ## Promemoria e webhook
 
-- **Promemoria:** in Impostazioni si attivano quelli a 24 ore e a 1 ora. Partono da WP-Cron (ogni 15 minuti) solo per le call prenotate con anticipo sufficiente.
+- **Promemoria:** in Notifiche si attivano quelli a 24 ore e a 1 ora. Senza chiave Resend li invia WP-Cron (ogni 15 minuti, e parte solo quando il sito riceve visite o c'è un cron di sistema). Con una chiave Resend vengono programmati su Resend appena arriva la prenotazione (fino a 30 giorni prima) e WP-Cron fa da rete di sicurezza. Se disattivi un promemoria, quelli già programmati su Resend partono comunque.
+- **Resend:** in Notifiche > Invio email si inserisce la chiave API (il mittente deve appartenere a un dominio verificato su Resend). Al salvataggio parte una email di prova. Se Resend dà errore viene disattivato, il proprietario del sito riceve una email e le email e i promemoria passano a WordPress e WP-Cron finché non si preme "Riprova".
+- **Messaggi e segnaposto:** i testi di conferma, spostamento e annullamento usano segnaposto come `{name}`, `{email}`, `{date}`, `{time}`, `{event}`, `{manage_url}` (elenco completo nella scheda Notifiche).
+- **Promemoria Google:** in Impostazioni si può impostare un promemoria sul proprio calendario (non sul cliente).
 - **Webhook:** in Impostazioni si indica l'URL (es. un nodo Webhook di n8n) e un segreto facoltativo. Eventi: `booking.created`, `booking.rescheduled`, `booking.cancelled`. Il corpo è JSON; se c'è un segreto la richiesta ha l'header `X-Wpbac-Signature: sha256=<hmac del corpo>`. L'invio non blocca la prenotazione.
 
 ## Hook per sviluppatori

@@ -28,7 +28,30 @@ final class Settings {
 	 *
 	 * @var string[]
 	 */
-	public const SECRET_KEYS = array( 'google_client_secret', 'google_refresh_token', 'webhook_secret' );
+	public const SECRET_KEYS = array( 'google_client_secret', 'google_refresh_token', 'webhook_secret', 'resend_api_key' );
+
+	/**
+	 * Chiavi con testi lunghi su più righe.
+	 *
+	 * @var string[]
+	 */
+	private const TEXTAREA_KEYS = array( 'thanks_message', 'rescheduled_message', 'cancelled_message', 'privacy_text' );
+
+	/**
+	 * Informativa privacy di default, usata nel modulo quando non c'è un URL (segnaposto: {host}, {site}, {admin_email}).
+	 * È un modello generico: va fatta rivedere.
+	 *
+	 * @return string
+	 */
+	public static function default_privacy_text(): string {
+		return "Titolare del trattamento: {host} ({site}).\n"
+			. 'Per prenotare la call raccogliamo il tuo nome, la tua email e le risposte che inserisci nel modulo. '
+			. "Questi dati servono solo a gestire la prenotazione: confermarla, inviarti i promemoria e l'invito per il calendario ed eventualmente creare il link per la videochiamata.\n"
+			. 'Per queste finalità i dati possono essere comunicati a Google (Calendar e Meet) e al servizio che invia le email del sito. '
+			. "Li conserviamo per il tempo necessario a gestire la call e a rispettare gli obblighi di legge.\n"
+			. 'Puoi chiedere accesso, rettifica o cancellazione dei tuoi dati scrivendo a {admin_email}. '
+			. 'Spuntando la casella dichiari di aver letto questa informativa.';
+	}
 
 	/**
 	 * Valori di default.
@@ -41,7 +64,12 @@ final class Settings {
 			'notify_recipients'        => (string) get_option( 'admin_email' ),
 			'from_email'               => '',
 			'client_email_enabled'     => true,
+			'resend_api_key'           => '',
 			'thanks_message'           => "Grazie per aver prenotato! Non vedo l'ora di sentirci.",
+			'rescheduled_message'      => "La tua prenotazione è stata spostata. Trovi i nuovi dettagli qui sotto e l'invito aggiornato in allegato.",
+			'cancelled_message'        => 'La tua prenotazione è stata annullata.',
+			'privacy_text'             => self::default_privacy_text(),
+			'google_reminder_minutes'  => 0,
 			'max_per_day'              => 2,
 			'one_active_per_client'    => true,
 			'skip_next_day'            => false,
@@ -137,10 +165,11 @@ final class Settings {
 			} elseif ( is_bool( $defaults[ $key ] ) ) {
 				$current[ $key ] = (bool) $value;
 			} elseif ( is_int( $defaults[ $key ] ) ) {
-				$current[ $key ] = min( 50, absint( $value ) );
+				// Limiti: 50 call al giorno al massimo, promemoria Google fino a 4 settimane prima.
+				$current[ $key ] = min( 'google_reminder_minutes' === $key ? 40320 : 50, absint( $value ) );
 			} elseif ( 'from_email' === $key ) {
 				$current[ $key ] = sanitize_email( (string) $value );
-			} elseif ( 'thanks_message' === $key ) {
+			} elseif ( in_array( $key, self::TEXTAREA_KEYS, true ) ) {
 				$current[ $key ] = sanitize_textarea_field( (string) $value );
 			} elseif ( in_array( $key, array( 'privacy_url', 'webhook_url' ), true ) ) {
 				$current[ $key ] = esc_url_raw( (string) $value );

@@ -16,7 +16,8 @@
     "release": "node scripts/release.js",
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
-    "release:major": "node scripts/release.js major"
+    "release:major": "node scripts/release.js major",
+    "check": "npm run build && node scripts/check-build.js"
   },
   "devDependencies": {
     "@wordpress/env": "^10.0.0",

@@ -20,6 +20,8 @@ use Mavida\BookACall\Database\EventTypeRepository;
 use Mavida\BookACall\Database\ExceptionRepository;
 use Mavida\BookACall\Database\Schema;
 use Mavida\BookACall\Email\EmailSender;
+use Mavida\BookACall\Email\ResendClient;
+use Mavida\BookACall\Email\ResendStatus;
 use Mavida\BookACall\Google\CalendarClient;
 use Mavida\BookACall\Google\OAuthClient;
 use Mavida\BookACall\REST\AdminController;
@@ -27,6 +29,7 @@ use Mavida\BookACall\REST\PublicController;
 use Mavida\BookACall\REST\RestController;
 use Mavida\BookACall\REST\UpdateController;
 use Mavida\BookACall\Privacy\PrivacyHandler;
+use Mavida\BookACall\Reminders\ReminderScheduler;
 use Mavida\BookACall\Reminders\ReminderService;
 use Mavida\BookACall\Support\Updater;
 use Mavida\BookACall\Webhook\WebhookSender;
@@ -95,9 +98,11 @@ final class Plugin {
 		$exceptions = new ExceptionRepository();
 		$oauth      = new OAuthClient();
 		$calendar   = new CalendarClient( $oauth );
-		$emails     = new EmailSender( new IcsBuilder() );
-		$avail      = new AvailabilityService( $bookings, $exceptions, $calendar, new SlotGenerator() );
-		$service    = new BookingService( $bookings, $avail, $calendar, $emails );
+		$resend     = new ResendClient( new ResendStatus() );
+		$emails     = new EmailSender( new IcsBuilder(), $resend );
+		$resend->status()->register();
+		$avail   = new AvailabilityService( $bookings, $exceptions, $calendar, new SlotGenerator() );
+		$service = new BookingService( $bookings, $avail, $calendar, $emails );
 
 		// Le risposte REST del plugin non devono mai finire nelle cache di pagina.
 		add_filter( 'rest_post_dispatch', array( RestController::class, 'no_cache' ), 10, 3 );
@@ -113,8 +118,10 @@ final class Plugin {
 		( new PublicController( $types, $bookings, $avail, $service ) )->register();
 		$webhook = new WebhookSender( $service );
 		$webhook->register();
-		( new ReminderService( $bookings, $types, $emails, $service ) )->register();
-		( new AdminController( $types, $bookings, $exceptions, $service, $emails, $oauth, $webhook, $avail ) )->register();
+		$scheduler = new ReminderScheduler( $bookings, $types, $emails, $resend, $service );
+		$scheduler->register();
+		( new ReminderService( $bookings, $types, $emails, $service, $scheduler ) )->register();
+		( new AdminController( $types, $bookings, $exceptions, $service, $emails, $oauth, $webhook, $avail, $resend ) )->register();
 		( new UpdateController() )->register();
 		( new PrivacyHandler( $bookings, $types, $service, $calendar ) )->register();
 

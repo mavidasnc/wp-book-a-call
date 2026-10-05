@@ -560,6 +560,25 @@
 		margin: 0 0 24px;
 	}
 
+	// Versione larga: serve spazio per i due mesi affiancati del selettore.
+	&.is-wide {
+		max-width: 960px;
+		width: 96vw;
+	}
+
+	&__note {
+		margin: 12px 0 0;
+		color: #646970;
+		font-size: 12px;
+	}
+
+	&__summary {
+		margin: 16px 0 0;
+		padding: 12px 16px;
+		border-left: 4px solid #2271b1;
+		background: #f0f6fc;
+	}
+
 	&__actions {
 		display: flex;
 		gap: 12px;
@@ -567,4 +586,11 @@
 		padding-top: 24px;
 		border-top: 1px solid #dcdcde;
 	}
+}
+
+// Selettore del sito dentro la modale: accento blu di WordPress al posto di quello del tema.
+.wpbac-admin-picker {
+	--wpbac-accent: #2271b1;
+
+	color: #1e1e1e;
 }

@@ -276,7 +276,72 @@ final class BookingRepository {
 	 * @return void
 	 */
 	public function mark_reminder( int $id, string $kind ): void {
-		$this->update( $id, array( '1' === $kind ? 'reminder_1_sent' : 'reminder_24_sent' => 1 ) );
+		$this->set_reminder( $id, $kind, 1, '' );
+	}
+
+	/**
+	 * Imposta stato e riferimento (id dell'invio programmato su Resend) di un promemoria.
+	 * Stato: 0 da fare, 1 inviato o non necessario, 2 programmato su Resend.
+	 *
+	 * @param int    $id    Id della prenotazione.
+	 * @param string $kind  '24' o '1'.
+	 * @param int    $state Stato del promemoria.
+	 * @param string $ref   Id dell'invio su Resend ('' se nessuno).
+	 * @return void
+	 */
+	public function set_reminder( int $id, string $kind, int $state, string $ref ): void {
+		$prefix = '1' === $kind ? 'reminder_1' : 'reminder_24';
+		$this->update(
+			$id,
+			array(
+				$prefix . '_sent' => $state,
+				$prefix . '_ref'  => $ref,
+			)
+		);
+	}
+
+	/**
+	 * Prenotazioni confermate con un promemoria da programmare su Resend: ancora da fare (stato 0)
+	 * e con l'invio compreso nell'orizzonte indicato.
+	 *
+	 * @param string $kind    '24' o '1'.
+	 * @param int    $now     Timestamp corrente.
+	 * @param int    $horizon Secondi di anticipo massimi per la programmazione.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function unscheduled_reminders( string $kind, int $now, int $horizon ): array {
+		global $wpdb;
+		$table  = Schema::table( 'bookings' );
+		$column = '1' === $kind ? 'reminder_1_sent' : 'reminder_24_sent';
+		$offset = '1' === $kind ? HOUR_IN_SECONDS : DAY_IN_SECONDS;
+		$rows   = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE status = 'confirmed' AND {$column} = 0 AND start_ts > %d AND start_ts <= %d",
+				$now + $offset,
+				$now + $offset + $horizon
+			),
+			ARRAY_A
+		);
+		return array_map( array( $this, 'hydrate' ), $rows ? $rows : array() );
+	}
+
+	/**
+	 * Prenotazioni con almeno un promemoria programmato su Resend (stato 2), ancora da venire.
+	 *
+	 * @param int $now Timestamp corrente.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function with_scheduled_reminders( int $now ): array {
+		global $wpdb;
+		$table = Schema::table( 'bookings' );
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE start_ts > %d AND ( reminder_24_sent = 2 OR reminder_1_sent = 2 )",
+				$now
+			),
+			ARRAY_A
+		);
+		return array_map( array( $this, 'hydrate' ), $rows ? $rows : array() );
 	}
 
 	/**

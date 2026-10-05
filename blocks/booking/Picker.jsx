@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { call, dayKey, fmtDate, fmtTime } from './utils';
 
@@ -87,8 +87,13 @@ function Month( { y, m, first, canPrev, byDay, takenByDay, day, onDay, onPrev, o
 /**
  * Due mesi affiancati + elenco degli orari del giorno scelto.
  * Chiama onSelect(timestamp) quando l'utente sceglie uno slot.
+ * Di base legge gli orari dall'API pubblica; l'admin passa `loadSlots( from, to )` (date Y-m-d),
+ * che restituisce `{ slots, taken }`, e `selected` per evidenziare l'orario scelto.
  */
-export default function Picker( { apiRoot, slug, tz, onSelect } ) {
+export default function Picker( { apiRoot, slug, tz, onSelect, loadSlots, selected } ) {
+	// Il caricatore può cambiare a ogni render: lo si legge da un ref per non rifare il fetch.
+	const loader = useRef( loadSlots );
+	loader.current = loadSlots;
 	const today = new Date();
 	const [ cursor, setCursor ] = useState( { y: today.getFullYear(), m: today.getMonth() } );
 	const [ slots, setSlots ] = useState( null );
@@ -104,9 +109,12 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 		setSlots( null );
 		const from = new Date( cursor.y, cursor.m, 0 ); // ultimo giorno del mese precedente
 		const to = new Date( cursor.y, cursor.m + 2, 1 ); // primo giorno del mese dopo il secondo
-		call( apiRoot, `/event-types/${ slug }/slots`, {
-			params: { from: keyOf( from ), to: keyOf( to ) },
-		} )
+		const request = loader.current
+			? loader.current( keyOf( from ), keyOf( to ) )
+			: call( apiRoot, `/event-types/${ slug }/slots`, {
+					params: { from: keyOf( from ), to: keyOf( to ) },
+			  } );
+		request
 			.then( ( data ) => {
 				// Orari occupati (previsti ma già impegnati): il widget li mostra non selezionabili.
 				setTaken( data.taken ?? [] );
@@ -189,7 +197,8 @@ export default function Picker( { apiRoot, slug, tz, onSelect } ) {
 									<button
 										type="button"
 										key={ item.ts }
-										className="wpbac-booking__slot"
+										className={ 'wpbac-booking__slot' + ( item.ts === selected ? ' is-selected' : '' ) }
+										aria-pressed={ item.ts === selected }
 										onClick={ () => onSelect( item.ts ) }
 									>
 										{ fmtTime( item.ts, tz ) }
