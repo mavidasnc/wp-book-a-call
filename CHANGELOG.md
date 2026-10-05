@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.1]
+
+- Email di conferma: il saluto torna "Ciao {nome}" per non ripetere il ringraziamento due volte.
+
 ## [0.4.0]
 
 - Email di conferma al cliente con messaggio di ringraziamento personalizzabile.

@@ -64,7 +64,7 @@ final class EmailSender {
 				array( $booking['email'] ),
 				sprintf( $subjects[ $kind ], $event_type['title'] ),
 				array(
-					'heading' => sprintf( 'created' === $kind ? 'Grazie %s!' : 'Ciao %s', $booking['name'] ),
+					'heading' => sprintf( 'Ciao %s', $booking['name'] ),
 					'intro'   => $intro[ $kind ],
 					'rows'    => $this->rows( $booking, $event_type, false ),
 					'links'   => $links,
