@@ -48,6 +48,10 @@ Menu **Book a Call** nell'admin:
 
 Il refresh token è salvato cifrato (libsodium, chiave derivata dai salt di WordPress).
 
+### Mittente delle email
+
+In Impostazioni > Notifiche si può indicare l'**email del mittente**; se è vuota si usa l'email di amministrazione del sito. Il nome del mittente è quello dell'organizzatore. Le altre email di WordPress non sono toccate. Perché le email non finiscano in spam, l'indirizzo deve appartenere a un dominio abilitato a spedire dal server (SPF/DKIM).
+
 ### Limiti di prenotazione
 
 In Impostazioni: **massimo di call al giorno** (default 2, 0 = nessun limite, vale per tutti i tipi di call e usa il fuso del sito) e **una sola call prenotata per cliente** (stessa email, maiuscole ignorate). Il cliente può prenotare di nuovo quando la call è conclusa o se l'ha annullata.

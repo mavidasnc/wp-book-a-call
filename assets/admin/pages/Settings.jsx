@@ -116,6 +116,18 @@ export default function Settings() {
 					value={ s.notify_recipients }
 					onChange={ set( 'notify_recipients' ) }
 				/>
+				<TextControl
+					type="email"
+					label={ __( 'Email del mittente', 'wp-book-a-call' ) }
+					help={ sprintf(
+						/* translators: %s: email di amministrazione del sito. */
+						__( 'Indirizzo da cui partono le email del plugin. Se vuoto usa l\'email di amministrazione del sito (%s). Per non finire in spam deve appartenere a un dominio abilitato a spedire dal server (SPF/DKIM).', 'wp-book-a-call' ),
+						s.admin_email
+					) }
+					placeholder={ s.admin_email }
+					value={ s.from_email }
+					onChange={ set( 'from_email' ) }
+				/>
 				<ToggleControl label={ __( 'Invia la conferma con .ics anche al cliente', 'wp-book-a-call' ) } checked={ s.client_email_enabled } onChange={ set( 'client_email_enabled' ) } />
 				<TextareaControl
 					label={ __( 'Messaggio di ringraziamento', 'wp-book-a-call' ) }

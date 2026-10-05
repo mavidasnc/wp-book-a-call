@@ -285,9 +285,17 @@ final class EmailSender {
 		};
 		add_action( 'phpmailer_init', $hook );
 
+		// Mittente delle sole email del plugin (di default WordPress usa wordpress@dominio).
+		$from_email = static fn(): string => Settings::from_email();
+		$from_name  = static fn(): string => Settings::host_name();
+		add_filter( 'wp_mail_from', $from_email, 99 );
+		add_filter( 'wp_mail_from_name', $from_name, 99 );
+
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
 		$sent      = wp_mail( $to, $subject, $html, $headers );
 
+		remove_filter( 'wp_mail_from', $from_email, 99 );
+		remove_filter( 'wp_mail_from_name', $from_name, 99 );
 		remove_action( 'phpmailer_init', $hook );
 		return $sent;
 	}

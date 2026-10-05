@@ -31,6 +31,19 @@ final class AdminMenu {
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_filter( 'plugin_action_links_' . plugin_basename( WPBAC_PLUGIN_FILE ), array( $this, 'add_settings_link' ) );
+	}
+
+	/**
+	 * Aggiunge il link "Impostazioni" nella riga del plugin, nell'elenco dei plugin.
+	 *
+	 * @param array<int|string,string> $links Link esistenti (Disattiva, ...).
+	 * @return array<int|string,string>
+	 */
+	public function add_settings_link( array $links ): array {
+		$url = admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=settings' );
+		array_unshift( $links, '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Impostazioni', 'wp-book-a-call' ) . '</a>' );
+		return $links;
 	}
 
 	/**
@@ -40,8 +53,8 @@ final class AdminMenu {
 	 */
 	public function add_menu(): void {
 		add_menu_page(
-			__( 'Book a Call', 'wp-book-a-call' ),
-			__( 'Book a Call', 'wp-book-a-call' ),
+			__( 'Book a call', 'wp-book-a-call' ),
+			__( 'Book a call', 'wp-book-a-call' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render_page' ),
@@ -83,7 +96,18 @@ final class AdminMenu {
 			$asset['version'],
 			true
 		);
-		wp_enqueue_style( 'wp-components' );
+		// Stile del plugin (generato insieme allo script): senza questo l'admin appare senza card né calendario.
+		if ( file_exists( WPBAC_PLUGIN_DIR . 'build/admin/index.css' ) ) {
+			wp_enqueue_style(
+				'wpbac-admin',
+				WPBAC_PLUGIN_URL . 'build/admin/index.css',
+				array( 'wp-components' ),
+				$asset['version']
+			);
+			wp_style_add_data( 'wpbac-admin', 'rtl', 'replace' );
+		} else {
+			wp_enqueue_style( 'wp-components' );
+		}
 		wp_set_script_translations( 'wpbac-admin', 'wp-book-a-call', WPBAC_PLUGIN_DIR . 'languages' );
 
 		// Dati per il client JS.

@@ -417,6 +417,7 @@ final class AdminController extends RestController {
 			$settings[ $key . '_set' ] = '' !== (string) $settings[ $key ];
 			unset( $settings[ $key ] );
 		}
+		$settings['admin_email']         = (string) get_option( 'admin_email' );
 		$settings['google_connected']    = Settings::google_connected();
 		$settings['google_redirect_uri'] = $this->oauth->redirect_uri();
 		$settings['google_auth_url']     = '' !== (string) Settings::get( 'google_client_id' ) && '' !== (string) Settings::get( 'google_client_secret' ) ? $this->oauth->auth_url() : '';

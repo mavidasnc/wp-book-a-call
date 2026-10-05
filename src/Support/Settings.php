@@ -39,6 +39,7 @@ final class Settings {
 		return array(
 			'notify_enabled'           => true,
 			'notify_recipients'        => (string) get_option( 'admin_email' ),
+			'from_email'               => '',
 			'client_email_enabled'     => true,
 			'thanks_message'           => "Grazie per aver prenotato! Non vedo l'ora di sentirci.",
 			'max_per_day'              => 2,
@@ -96,6 +97,16 @@ final class Settings {
 	}
 
 	/**
+	 * Indirizzo mittente delle email del plugin: quello impostato, altrimenti l'email di amministrazione del sito.
+	 *
+	 * @return string
+	 */
+	public static function from_email(): string {
+		$email = (string) self::get( 'from_email' );
+		return is_email( $email ) ? $email : (string) get_option( 'admin_email' );
+	}
+
+	/**
 	 * Destinatari delle notifiche admin, già validati.
 	 *
 	 * @return string[]
@@ -125,6 +136,8 @@ final class Settings {
 				$current[ $key ] = (bool) $value;
 			} elseif ( is_int( $defaults[ $key ] ) ) {
 				$current[ $key ] = min( 50, absint( $value ) );
+			} elseif ( 'from_email' === $key ) {
+				$current[ $key ] = sanitize_email( (string) $value );
 			} elseif ( 'thanks_message' === $key ) {
 				$current[ $key ] = sanitize_textarea_field( (string) $value );
 			} elseif ( in_array( $key, array( 'privacy_url', 'webhook_url' ), true ) ) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0]
+
+- Correzione: lo stile dell'admin (card, calendario delle eccezioni, tabelle, spaziature) non veniva caricato; ora il CSS del plugin è agganciato alla pagina.
+- Nuovo campo "Email del mittente" (di default l'email di amministrazione del sito); le email del plugin partono con il nome dell'organizzatore invece di "WordPress".
+- Il plugin si chiama "Book a call" e nell'elenco dei plugin c'è il link "Impostazioni" che apre direttamente la scheda delle opzioni.
+- Interruttori e barra dei filtri delle prenotazioni con più spazio intorno.
+
 ## [0.4.1]
 
 - Email di conferma: il saluto torna "Ciao {nome}" per non ripetere il ringraziamento due volte.
