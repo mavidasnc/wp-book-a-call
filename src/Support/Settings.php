@@ -40,6 +40,9 @@ final class Settings {
 			'notify_enabled'           => true,
 			'notify_recipients'        => (string) get_option( 'admin_email' ),
 			'client_email_enabled'     => true,
+			'thanks_message'           => "Grazie per aver prenotato! Non vedo l'ora di sentirci.",
+			'max_per_day'              => 2,
+			'one_active_per_client'    => true,
 			'reminder_24h'             => true,
 			'reminder_1h'              => false,
 			'webhook_url'              => '',
@@ -120,6 +123,10 @@ final class Settings {
 				$current[ $key ] = Crypto::encrypt( (string) $value );
 			} elseif ( is_bool( $defaults[ $key ] ) ) {
 				$current[ $key ] = (bool) $value;
+			} elseif ( is_int( $defaults[ $key ] ) ) {
+				$current[ $key ] = min( 50, absint( $value ) );
+			} elseif ( 'thanks_message' === $key ) {
+				$current[ $key ] = sanitize_textarea_field( (string) $value );
 			} elseif ( in_array( $key, array( 'privacy_url', 'webhook_url' ), true ) ) {
 				$current[ $key ] = esc_url_raw( (string) $value );
 			} else {

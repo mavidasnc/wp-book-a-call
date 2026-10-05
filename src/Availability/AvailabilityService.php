@@ -50,6 +50,14 @@ final class AvailabilityService {
 		$busy = $this->bookings->busy_intervals( $from_ts - DAY_IN_SECONDS, $to_ts + DAY_IN_SECONDS, $exclude_id );
 		$busy = array_merge( $busy, $this->google_busy( $from_ts - DAY_IN_SECONDS, $to_ts + DAY_IN_SECONDS, $fresh ) );
 
+		// Prenotazioni già presenti per giorno (fuso del sito), per rispettare il limite giornaliero.
+		$tz     = wp_timezone();
+		$counts = array();
+		foreach ( $this->bookings->starts_between( $from_ts - DAY_IN_SECONDS, $to_ts + DAY_IN_SECONDS, $exclude_id ) as $start ) {
+			$day            = wp_date( 'Y-m-d', $start, $tz );
+			$counts[ $day ] = ( $counts[ $day ] ?? 0 ) + 1;
+		}
+
 		return $this->generator->generate(
 			$event_type,
 			$from_ts,
@@ -57,7 +65,9 @@ final class AvailabilityService {
 			$busy,
 			$this->exceptions->for_event_type( (int) $event_type['id'] ),
 			time(),
-			wp_timezone()
+			$tz,
+			$counts,
+			(int) Settings::get( 'max_per_day' )
 		);
 	}
 

@@ -112,6 +112,21 @@ final class SlotGeneratorTest extends TestCase {
 		$this->assertSame( array( '09:00', '10:00', '11:00' ), $this->day( $et, '2026-10-05' ) );
 	}
 
+	public function test_full_day_has_no_slots(): void {
+		$slots = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), array(), array(), $this->ts( '2026-01-01 00:00' ), $this->tz, array( '2026-10-05' => 2 ), 2 );
+		$this->assertSame( array(), $slots );
+	}
+
+	public function test_day_below_limit_keeps_slots(): void {
+		$slots = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), array(), array(), $this->ts( '2026-01-01 00:00' ), $this->tz, array( '2026-10-05' => 1 ), 2 );
+		$this->assertCount( 6, $slots );
+	}
+
+	public function test_zero_limit_means_unlimited(): void {
+		$slots = ( new SlotGenerator() )->generate( $this->event_type(), $this->ts( '2026-10-05 00:00' ), $this->ts( '2026-10-06 00:00' ), array(), array(), $this->ts( '2026-01-01 00:00' ), $this->tz, array( '2026-10-05' => 9 ), 0 );
+		$this->assertCount( 6, $slots );
+	}
+
 	public function test_daylight_saving_change_keeps_local_hours(): void {
 		// Il 2026-10-25 (domenica) l'ora legale finisce: gli orari locali restano 09:00-10:00.
 		$et = $this->event_type( array( 'weekly_hours' => array( 'sun' => array( array( '09:00', '10:00' ) ) ) ) );

@@ -95,12 +95,22 @@ final class OAuthClient {
 		}
 
 		$code   = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
-		$result = 'error';
-		if ( '' !== $code ) {
-			$result = $this->exchange_code( $code ) ? 'ok' : 'error';
+		$denied = isset( $_GET['error'] ) ? sanitize_key( wp_unslash( $_GET['error'] ) ) : '';
+
+		// Esito: "ok" oppure il motivo dell'errore (access_denied, invalid_client, redirect_uri_mismatch...).
+		if ( '' !== $denied ) {
+			$reason = $denied;
+		} elseif ( '' === $code ) {
+			$reason = 'no_code';
+		} else {
+			$reason = $this->exchange_code( $code );
 		}
 
-		wp_safe_redirect( add_query_arg( 'wpbac_google', $result, admin_url( 'admin.php?page=' . AdminMenu::MENU_SLUG ) ) );
+		$args = 'ok' === $reason ? array( 'wpbac_google' => 'ok' ) : array(
+			'wpbac_google' => 'error',
+			'wpbac_reason' => $reason,
+		);
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php?page=' . AdminMenu::MENU_SLUG ) ) );
 		exit;
 	}
 
@@ -108,9 +118,9 @@ final class OAuthClient {
 	 * Scambia il code con access e refresh token.
 	 *
 	 * @param string $code Authorization code.
-	 * @return bool
+	 * @return string "ok" oppure il codice dell'errore.
 	 */
-	private function exchange_code( string $code ): bool {
+	private function exchange_code( string $code ): string {
 		$response = wp_remote_post(
 			self::TOKEN_URL,
 			array(
@@ -124,16 +134,21 @@ final class OAuthClient {
 				),
 			)
 		);
-		$body     = is_wp_error( $response ) ? array() : json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( is_wp_error( $response ) ) {
+			return 'network';
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( empty( $body['refresh_token'] ) ) {
-			return false;
+			// Google spiega l'errore nel campo "error" (invalid_client, invalid_grant, redirect_uri_mismatch...).
+			return isset( $body['error'] ) ? sanitize_key( (string) $body['error'] ) : 'no_refresh_token';
 		}
 
 		Settings::update( array( 'google_refresh_token' => $body['refresh_token'] ) );
 		if ( ! empty( $body['access_token'] ) ) {
 			set_transient( self::TOKEN_TRANSIENT, $body['access_token'], max( 60, (int) ( $body['expires_in'] ?? 3600 ) - 120 ) );
 		}
-		return true;
+		return 'ok';
 	}
 
 	/**

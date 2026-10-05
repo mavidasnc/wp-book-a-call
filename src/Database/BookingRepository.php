@@ -95,9 +95,10 @@ final class BookingRepository {
 	 *
 	 * @param string $scope         upcoming|past|all.
 	 * @param int    $event_type_id Filtro tipo di call (0 = tutti).
+	 * @param int    $limit         Numero massimo di righe.
 	 * @return array<int,array<string,mixed>>
 	 */
-	public function list( string $scope = 'upcoming', int $event_type_id = 0 ): array {
+	public function list( string $scope = 'upcoming', int $event_type_id = 0, int $limit = 500 ): array {
 		global $wpdb;
 		$table = Schema::table( 'bookings' );
 		$where = array( '1=1' );
@@ -116,7 +117,7 @@ final class BookingRepository {
 		}
 
 		$order = 'upcoming' === $scope ? 'ASC' : 'DESC';
-		$sql   = "SELECT * FROM {$table} WHERE " . implode( ' AND ', $where ) . " ORDER BY start_ts {$order} LIMIT 500";
+		$sql   = "SELECT * FROM {$table} WHERE " . implode( ' AND ', $where ) . " ORDER BY start_ts {$order} LIMIT " . max( 1, $limit );
 		// Il SQL è composto solo da frammenti fissi e placeholder: i valori passano da prepare().
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$sql = $args ? $wpdb->prepare( $sql, $args ) : $sql;
@@ -155,6 +156,93 @@ final class BookingRepository {
 			$out[] = array( (int) $row['start_ts'], (int) $row['end_ts'] );
 		}
 		return $out;
+	}
+
+	/**
+	 * Inizi delle prenotazioni confermate in una finestra (per il limite giornaliero).
+	 *
+	 * @param int $from_ts    Inizio finestra.
+	 * @param int $to_ts      Fine finestra.
+	 * @param int $exclude_id Prenotazione da ignorare (spostamento).
+	 * @return int[]
+	 */
+	public function starts_between( int $from_ts, int $to_ts, int $exclude_id = 0 ): array {
+		global $wpdb;
+		$table = Schema::table( 'bookings' );
+		$rows  = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT start_ts FROM {$table} WHERE status = 'confirmed' AND id <> %d AND start_ts >= %d AND start_ts < %d",
+				$exclude_id,
+				$from_ts,
+				$to_ts
+			)
+		);
+		return array_map( 'intval', $rows ? $rows : array() );
+	}
+
+	/**
+	 * Esiste una prenotazione confermata e non ancora conclusa per questa email?
+	 *
+	 * @param string $email Email del cliente (maiuscole ignorate).
+	 * @param int    $now   Timestamp corrente.
+	 * @return bool
+	 */
+	public function has_active_for_email( string $email, int $now ): bool {
+		global $wpdb;
+		$table = Schema::table( 'bookings' );
+		$count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE status = 'confirmed' AND end_ts > %d AND LOWER(email) = %s",
+				$now,
+				strtolower( $email )
+			)
+		);
+		return (int) $count > 0;
+	}
+
+	/**
+	 * Prenotazioni di una persona (per exporter ed eraser privacy), a pagine.
+	 *
+	 * @param string $email    Email (maiuscole ignorate).
+	 * @param int    $page     Pagina, da 1.
+	 * @param int    $per_page Righe per pagina.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function by_email( string $email, int $page, int $per_page ): array {
+		global $wpdb;
+		$table = Schema::table( 'bookings' );
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE LOWER(email) = %s ORDER BY id ASC LIMIT %d OFFSET %d",
+				strtolower( $email ),
+				$per_page,
+				max( 0, $page - 1 ) * $per_page
+			),
+			ARRAY_A
+		);
+		return array_map( array( $this, 'hydrate' ), $rows ? $rows : array() );
+	}
+
+	/**
+	 * Rende anonima una prenotazione: restano solo data, ora e tipo di call.
+	 *
+	 * @param int $id Id della prenotazione.
+	 * @return void
+	 */
+	public function anonymize( int $id ): void {
+		$this->update(
+			$id,
+			array(
+				'name'            => 'Utente rimosso',
+				'email'           => 'rimosso-' . $id . '@invalid.invalid',
+				'answers'         => '[]',
+				'token_hash'      => '',
+				'source_url'      => '',
+				'google_event_id' => '',
+				'meet_url'        => '',
+				'ip_hash'         => '',
+			)
+		);
 	}
 
 	/**

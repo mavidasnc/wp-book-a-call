@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace Mavida\BookACall\Webhook;
 
+use Mavida\BookACall\Booking\BookingService;
 use Mavida\BookACall\Support\Settings;
+use Mavida\BookACall\Support\Token;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -17,6 +19,13 @@ defined( 'ABSPATH' ) || exit;
  * Invia un POST JSON firmato (HMAC SHA-256) a ogni prenotazione creata, spostata o annullata.
  */
 final class WebhookSender {
+
+	/**
+	 * Costruttore.
+	 *
+	 * @param BookingService $service Servizio prenotazioni (per il link di gestione).
+	 */
+	public function __construct( private readonly BookingService $service ) {}
 
 	/**
 	 * Aggancia gli eventi del plugin.
@@ -53,48 +62,75 @@ final class WebhookSender {
 	}
 
 	/**
-	 * Payload JSON di un evento (senza token né dati interni).
+	 * Payload JSON di un evento: tutti i dati della prenotazione, tranne l'hash del token e l'IP.
 	 *
 	 * @param string              $event      Nome evento.
 	 * @param array<string,mixed> $booking    Prenotazione.
 	 * @param array<string,mixed> $event_type Tipo di call.
 	 * @return array<string,mixed>
 	 */
-	public static function payload( string $event, array $booking, array $event_type ): array {
+	public function payload( string $event, array $booking, array $event_type ): array {
 		$answers = array();
 		foreach ( (array) $event_type['questions'] as $question ) {
 			if ( isset( $booking['answers'][ $question['id'] ] ) && '' !== $booking['answers'][ $question['id'] ] ) {
 				$answers[] = array(
+					'id'       => $question['id'],
 					'question' => $question['label'],
 					'answer'   => $booking['answers'][ $question['id'] ],
 				);
 			}
 		}
 
+		$id = (int) $booking['id'];
+
 		return array(
 			'event'      => $event,
 			'sent_at'    => gmdate( 'c' ),
 			'site'       => home_url(),
 			'booking'    => array(
-				'id'       => $booking['id'],
-				'status'   => $booking['status'],
-				'start'    => gmdate( 'c', $booking['start_ts'] ),
-				'end'      => gmdate( 'c', $booking['end_ts'] ),
-				'start_ts' => $booking['start_ts'],
-				'name'     => $booking['name'],
-				'email'    => $booking['email'],
-				'timezone' => $booking['timezone'],
-				'meet_url' => $booking['meet_url'],
-				'answers'  => $answers,
+				'id'              => $id,
+				'status'          => $booking['status'],
+				'start'           => gmdate( 'c', $booking['start_ts'] ),
+				'end'             => gmdate( 'c', $booking['end_ts'] ),
+				'start_ts'        => $booking['start_ts'],
+				'end_ts'          => $booking['end_ts'],
+				'name'            => $booking['name'],
+				'email'           => $booking['email'],
+				'timezone'        => $booking['timezone'],
+				'meet_url'        => $booking['meet_url'],
+				'answers'         => $answers,
+				'source_url'      => $booking['source_url'] ?? '',
+				'google_event_id' => $booking['google_event_id'] ?? '',
+				'ics_sequence'    => $booking['ics_sequence'] ?? 0,
+				'created_at'      => $this->iso( $booking['created_at'] ?? null ),
+				'cancelled_at'    => $this->iso( $booking['cancelled_at'] ?? null ),
+				// Link per spostare o annullare: utile se l'automazione scrive al cliente.
+				'manage_url'      => $id > 0 ? $this->service->manage_url( $booking, Token::for_booking( $id ) ) : '',
 			),
 			'event_type' => array(
-				'id'            => $event_type['id'],
-				'slug'          => $event_type['slug'],
-				'title'         => $event_type['title'],
-				'duration_min'  => $event_type['duration_min'],
-				'location_type' => $event_type['location_type'],
+				'id'             => $event_type['id'],
+				'slug'           => $event_type['slug'],
+				'title'          => $event_type['title'],
+				'description'    => $event_type['description'] ?? '',
+				'duration_min'   => $event_type['duration_min'],
+				'location_type'  => $event_type['location_type'],
+				'location_value' => $event_type['location_value'] ?? '',
 			),
 		);
+	}
+
+	/**
+	 * Data MySQL in GMT → ISO 8601 (null se assente).
+	 *
+	 * @param mixed $mysql_gmt Data nel formato "Y-m-d H:i:s" (GMT).
+	 * @return string|null
+	 */
+	private function iso( mixed $mysql_gmt ): ?string {
+		if ( empty( $mysql_gmt ) ) {
+			return null;
+		}
+		$ts = strtotime( $mysql_gmt . ' UTC' );
+		return false === $ts ? null : gmdate( 'c', $ts );
 	}
 
 	/**
@@ -112,7 +148,7 @@ final class WebhookSender {
 			return null;
 		}
 
-		$body    = (string) wp_json_encode( self::payload( $event, $booking, $event_type ) );
+		$body    = (string) wp_json_encode( $this->payload( $event, $booking, $event_type ) );
 		$headers = array(
 			'Content-Type'   => 'application/json',
 			'X-Wpbac-Event'  => $event,

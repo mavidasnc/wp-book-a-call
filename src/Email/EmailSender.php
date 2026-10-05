@@ -47,12 +47,12 @@ final class EmailSender {
 		// Email al cliente.
 		if ( Settings::get( 'client_email_enabled' ) && is_email( $booking['email'] ) ) {
 			$subjects = array(
-				'created'     => 'Prenotazione confermata: %s',
+				'created'     => 'Grazie per aver prenotato: %s',
 				'rescheduled' => 'Prenotazione spostata: %s',
 				'cancelled'   => 'Prenotazione annullata: %s',
 			);
 			$intro    = array(
-				'created'     => 'La tua prenotazione è confermata. Trovi i dettagli qui sotto e l\'invito per il calendario in allegato.',
+				'created'     => trim( (string) Settings::get( 'thanks_message' ) . ' La tua prenotazione è confermata: trovi i dettagli qui sotto e l\'invito per il calendario in allegato.' ),
 				'rescheduled' => 'La tua prenotazione è stata spostata. Trovi i nuovi dettagli qui sotto e l\'invito aggiornato in allegato.',
 				'cancelled'   => 'La tua prenotazione è stata annullata.',
 			);
@@ -64,7 +64,7 @@ final class EmailSender {
 				array( $booking['email'] ),
 				sprintf( $subjects[ $kind ], $event_type['title'] ),
 				array(
-					'heading' => sprintf( 'Ciao %s', $booking['name'] ),
+					'heading' => sprintf( 'created' === $kind ? 'Grazie %s!' : 'Ciao %s', $booking['name'] ),
 					'intro'   => $intro[ $kind ],
 					'rows'    => $this->rows( $booking, $event_type, false ),
 					'links'   => $links,

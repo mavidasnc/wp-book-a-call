@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0]
+
+- Email di conferma al cliente con messaggio di ringraziamento personalizzabile.
+- Limiti di prenotazione: massimo di call al giorno (default 2) e una sola call attiva per cliente (si può prenotare di nuovo dopo la call o se la precedente è annullata).
+- Export CSV delle prenotazioni dall'admin (punto e virgola, UTF-8, protezione dalle formule).
+- Strumenti Privacy di WordPress: esportazione e cancellazione (anonimizzazione) dei dati di una persona, più testo suggerito per la privacy policy.
+- Webhook: il payload contiene tutti i dati della prenotazione (link di gestione, pagina di origine, id evento Google, date di creazione e annullamento, descrizione e luogo del tipo di call); in Impostazioni c'è un esempio del JSON.
+- Google: guida passo-passo per ottenere Client ID e Client secret e pulsante "Salva e collega con Google"; messaggi chiari se il collegamento fallisce.
+
 ## [0.3.0]
 
 - Promemoria email al cliente 24 ore e 1 ora prima della call (WP-Cron ogni 15 minuti), con link per spostare o annullare. Si attivano dalle Impostazioni.

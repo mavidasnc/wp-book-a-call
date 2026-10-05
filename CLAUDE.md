@@ -40,3 +40,7 @@ Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tool
 - Webhook: `Webhook/WebhookSender` agganciato alle azioni `wpbac_booking_*`, non bloccante, firma HMAC in `X-Wpbac-Signature`.
 - Aggiornamenti dall'admin: `REST/UpdateController` + `Support/Updater` (PUC); l'installazione usa `Plugin_Upgrader`.
 - Verifica visiva dell'admin senza login: harness locale con gli script core scaricati da `load-scripts.php` e le API simulate (vedi la cartella di lavoro della sessione, non è nel repo).
+- Limiti: `max_per_day` entra in `SlotGenerator::generate` (parametri finali opzionali, conteggio per giorno calcolato da `AvailabilityService`); `one_active_per_client` è un controllo in `BookingService::create`, dentro il lock.
+- Privacy: `Privacy/PrivacyHandler` (exporter/eraser per email). L'eraser rilegge sempre la pagina 1 perché le righe anonimizzate non corrispondono più all'email.
+- Export CSV: `GET /admin/bookings/export` restituisce `{filename, csv}`; il download lo crea il browser (Blob). `Export/CsvBuilder` è pura e testata.
+- OAuth Google: il callback `admin-post.php?action=wpbac_google_callback` rimanda all'admin con `wpbac_google=ok|error&wpbac_reason=<codice>`; serve un client OAuth di tipo "Applicazione web" (un client "Desktop" accetta solo redirect su localhost).

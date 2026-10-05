@@ -1,7 +1,7 @@
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Button, Notice, SelectControl, Spinner } from '@wordpress/components';
-import { api, formatDate } from '../api';
+import { api, downloadFile, formatDate } from '../api';
 import Section from '../components/Section';
 
 export default function Bookings() {
@@ -10,6 +10,7 @@ export default function Bookings() {
 	const [ types, setTypes ] = useState( [] );
 	const [ confirmId, setConfirmId ] = useState( 0 );
 	const [ error, setError ] = useState( '' );
+	const [ exporting, setExporting ] = useState( false );
 
 	const load = () =>
 		api( `/admin/bookings?scope=${ scope }` )
@@ -26,6 +27,15 @@ export default function Bookings() {
 	}, [] );
 
 	const typeTitle = ( id ) => types.find( ( t ) => t.id === id )?.title ?? `#${ id }`;
+
+	// Esporta in CSV le prenotazioni del filtro corrente.
+	const exportCsv = () => {
+		setExporting( true );
+		api( `/admin/bookings/export?scope=${ scope }` )
+			.then( ( data ) => downloadFile( data.filename, data.csv ) )
+			.catch( ( e ) => setError( e.message ) )
+			.finally( () => setExporting( false ) );
+	};
 
 	// Doppio clic: il primo chiede conferma, il secondo annulla davvero.
 	const cancel = ( id ) => {
@@ -64,6 +74,9 @@ export default function Bookings() {
 						onChange={ setScope }
 						__nextHasNoMarginBottom
 					/>
+					<Button variant="secondary" isBusy={ exporting } disabled={ exporting } onClick={ exportCsv }>
+						{ __( 'Esporta CSV', 'wp-book-a-call' ) }
+					</Button>
 				</div>
 
 				{ null === rows && <Spinner /> }

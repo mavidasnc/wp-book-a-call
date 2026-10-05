@@ -26,7 +26,6 @@
 
 	.components-toggle-control .components-base-control__help {
 		margin-top: 8px;
-		margin-left: 52px;
 	}
 
 	.components-notice {
@@ -132,6 +131,11 @@
 		align-items: flex-end;
 		gap: 16px;
 		margin-bottom: 24px;
+
+		// Il margine dei controlli sfalserebbe l'allineamento con i pulsanti accanto.
+		.components-base-control {
+			margin-bottom: 0;
+		}
 	}
 
 	// Pulsanti sotto un gruppo di campi: sempre staccati dal contenuto sopra e tra loro.
@@ -150,6 +154,65 @@
 		margin: 8px 0 32px;
 		padding-top: 24px;
 		border-top: 1px solid var(--wpbac-border);
+	}
+
+	// Riquadri espandibili (guida Google, esempio webhook).
+	&__guide {
+		margin: 0 0 32px;
+		padding: 16px 20px;
+		border: 1px solid var(--wpbac-border);
+		border-radius: 6px;
+		background: #f6f7f7;
+
+		summary {
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		&[open] summary {
+			margin-bottom: 16px;
+		}
+	}
+
+	&__steps {
+		margin: 0;
+		padding-left: 20px;
+
+		li {
+			margin: 0 0 16px;
+			line-height: 1.6;
+		}
+
+		li:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	&__copy {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		margin-top: 8px;
+
+		code {
+			padding: 6px 10px;
+			word-break: break-all;
+		}
+	}
+
+	&__code {
+		margin: 0;
+		padding: 16px;
+		overflow-x: auto;
+		border-radius: 6px;
+		background: #fff;
+		font-size: 12px;
+		line-height: 1.5;
+	}
+
+	&__status {
+		margin: 0 0 24px;
 	}
 
 	&__item-actions {

@@ -78,6 +78,11 @@ final class BookingService {
 			if ( ! $this->availability->is_available( $event_type, $start ) ) {
 				return new \WP_Error( 'wpbac_slot_taken', __( 'Questo orario non è più disponibile. Scegline un altro.', 'wp-book-a-call' ), array( 'status' => 409 ) );
 			}
+			// Una sola call attiva per cliente: si può prenotare di nuovo dopo la call o se la precedente è annullata.
+			// Il messaggio non indica data né ora, per non rivelare dettagli di una prenotazione altrui.
+			if ( Settings::get( 'one_active_per_client' ) && $this->bookings->has_active_for_email( $email, time() ) ) {
+				return new \WP_Error( 'wpbac_already_booked', __( 'Risulta già una prenotazione attiva con questa email. Potrai prenotare di nuovo dopo la call, oppure puoi spostarla o annullarla dal link nell\'email di conferma.', 'wp-book-a-call' ), array( 'status' => 422 ) );
+			}
 			$id = $this->bookings->insert(
 				array(
 					'event_type_id' => $event_type['id'],
@@ -152,9 +157,10 @@ final class BookingService {
 	 *
 	 * @param array<string,mixed> $booking    Prenotazione.
 	 * @param array<string,mixed> $event_type Tipo di call.
+	 * @param bool                $notify     Invia le email di annullamento (false per l'eraser privacy).
 	 * @return void
 	 */
-	public function cancel( array $booking, array $event_type ): void {
+	public function cancel( array $booking, array $event_type, bool $notify = true ): void {
 		if ( BookingStatus::Cancelled->value === $booking['status'] ) {
 			return;
 		}
@@ -173,7 +179,9 @@ final class BookingService {
 		}
 
 		$booking = $this->bookings->find( $booking['id'] );
-		$this->emails->send_booking_email( 'cancelled', $booking, $event_type, '' );
+		if ( $notify ) {
+			$this->emails->send_booking_email( 'cancelled', $booking, $event_type, '' );
+		}
 
 		/** Prenotazione annullata. */
 		do_action( 'wpbac_booking_cancelled', $booking, $event_type );

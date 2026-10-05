@@ -34,9 +34,11 @@ final class SlotGenerator {
 	 * @param array<int,array{date_from:string,date_to:string}> $exceptions Giorni di chiusura (date locali Y-m-d).
 	 * @param int                                               $now        Timestamp corrente.
 	 * @param DateTimeZone                                      $tz         Fuso in cui sono espressi gli orari settimanali.
+	 * @param array<string,int>                                 $day_counts Prenotazioni già presenti per data locale (Y-m-d).
+	 * @param int                                               $max_per_day Massimo di prenotazioni al giorno (0 = nessun limite).
 	 * @return int[]
 	 */
-	public function generate( array $event_type, int $from_ts, int $to_ts, array $busy, array $exceptions, int $now, DateTimeZone $tz ): array {
+	public function generate( array $event_type, int $from_ts, int $to_ts, array $busy, array $exceptions, int $now, DateTimeZone $tz, array $day_counts = array(), int $max_per_day = 0 ): array {
 		$duration = (int) $event_type['duration_min'] * 60;
 		$step     = max( 1, (int) $event_type['slot_step_min'] ) * 60;
 		$before   = (int) $event_type['buffer_before_min'] * 60;
@@ -53,7 +55,9 @@ final class SlotGenerator {
 		while ( $day->format( 'Y-m-d' ) <= $last ) {
 			$date = $day->format( 'Y-m-d' );
 
-			if ( ! $this->is_closed( $date, $exceptions ) ) {
+			// Giorno chiuso (eccezione) oppure già al limite di prenotazioni: nessuno slot.
+			$is_full = $max_per_day > 0 && ( $day_counts[ $date ] ?? 0 ) >= $max_per_day;
+			if ( ! $is_full && ! $this->is_closed( $date, $exceptions ) ) {
 				$key = self::DAYS[ (int) $day->format( 'N' ) - 1 ];
 				foreach ( (array) ( $hours[ $key ] ?? array() ) as $range ) {
 					$window_start = ( new DateTimeImmutable( $date . ' ' . $range[0], $tz ) )->getTimestamp();

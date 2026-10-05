@@ -14,6 +14,7 @@ use Mavida\BookACall\Database\BookingRepository;
 use Mavida\BookACall\Database\EventTypeRepository;
 use Mavida\BookACall\Database\ExceptionRepository;
 use Mavida\BookACall\Email\EmailSender;
+use Mavida\BookACall\Export\BookingExporter;
 use Mavida\BookACall\Google\OAuthClient;
 use Mavida\BookACall\Support\Settings;
 use Mavida\BookACall\Webhook\WebhookSender;
@@ -93,6 +94,15 @@ final class AdminController extends RestController {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'list_bookings' ),
+				'permission_callback' => $admin,
+			)
+		);
+		register_rest_route(
+			self::API_NAMESPACE,
+			'/admin/bookings/export',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'export_bookings' ),
 				'permission_callback' => $admin,
 			)
 		);
@@ -230,6 +240,25 @@ final class AdminController extends RestController {
 			unset( $row['token_hash'], $row['ip_hash'] );
 		}
 		return $this->respond( $rows );
+	}
+
+	/**
+	 * Esporta le prenotazioni in CSV (il client crea il file e avvia il download).
+	 *
+	 * @param \WP_REST_Request $request Richiesta.
+	 * @return \WP_REST_Response
+	 */
+	public function export_bookings( \WP_REST_Request $request ): \WP_REST_Response {
+		$scope = in_array( $request->get_param( 'scope' ), array( 'upcoming', 'past', 'all' ), true ) ? $request->get_param( 'scope' ) : 'all';
+		$rows  = $this->bookings->list( $scope, (int) $request->get_param( 'event_type_id' ), 10000 );
+
+		return $this->respond(
+			array(
+				'filename' => 'prenotazioni-' . wp_date( 'Y-m-d' ) . '.csv',
+				'count'    => count( $rows ),
+				'csv'      => ( new BookingExporter( $this->types ) )->csv( $rows ),
+			)
+		);
 	}
 
 	/**

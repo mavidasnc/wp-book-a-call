@@ -26,6 +26,7 @@ use Mavida\BookACall\REST\AdminController;
 use Mavida\BookACall\REST\PublicController;
 use Mavida\BookACall\REST\RestController;
 use Mavida\BookACall\REST\UpdateController;
+use Mavida\BookACall\Privacy\PrivacyHandler;
 use Mavida\BookACall\Reminders\ReminderService;
 use Mavida\BookACall\Support\Updater;
 use Mavida\BookACall\Webhook\WebhookSender;
@@ -110,11 +111,12 @@ final class Plugin {
 		// Componenti.
 		( new BlockRegistrar() )->register();
 		( new PublicController( $types, $bookings, $avail, $service ) )->register();
-		$webhook = new WebhookSender();
+		$webhook = new WebhookSender( $service );
 		$webhook->register();
 		( new ReminderService( $bookings, $types, $emails, $service ) )->register();
 		( new AdminController( $types, $bookings, $exceptions, $service, $emails, $oauth, $webhook ) )->register();
 		( new UpdateController() )->register();
+		( new PrivacyHandler( $bookings, $types, $service, $calendar ) )->register();
 
 		if ( is_admin() ) {
 			( new AdminMenu() )->register();

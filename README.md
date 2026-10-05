@@ -10,6 +10,9 @@ Plugin WordPress con blocco Gutenberg per prenotare **call conoscitive**, in sti
 - Email di notifica agli amministratori e conferma al cliente, con **iCal (.ics)** allegato.
 - **Annulla e sposta** tramite link firmato nell'email.
 - **Google Calendar** opzionale (OAuth2 con client proprio): crea l'evento, genera il link **Google Meet**, esclude gli orari occupati (free/busy).
+- Messaggio di ringraziamento personalizzabile nell'email di conferma.
+- Limiti: massimo di call al giorno e una sola call attiva per cliente.
+- Export CSV delle prenotazioni e strumenti Privacy di WordPress (esporta e anonimizza i dati di una persona).
 - Promemoria email 24 ore e 1 ora prima della call (WP-Cron).
 - Webhook firmato (HMAC SHA-256) verso n8n o altri sistemi a ogni prenotazione.
 - Anti-spam: honeypot, tempo minimo di compilazione, rate limit, consenso privacy obbligatorio.
@@ -41,9 +44,17 @@ Menu **Book a Call** nell'admin:
 
 1. In Google Cloud Console crea un client OAuth (tipo "Applicazione web") e abilita la Google Calendar API.
 2. Aggiungi come URI di reindirizzamento quello mostrato in **Impostazioni > Google Calendar**.
-3. Inserisci Client ID e Client secret, salva e premi **Collega account Google**.
+3. Inserisci Client ID e Client secret e premi **Salva e collega con Google**. L'admin contiene una guida passo-passo (usa un client OAuth di tipo "Applicazione web" e pubblica l'app, altrimenti in modalità test il collegamento scade dopo 7 giorni).
 
 Il refresh token è salvato cifrato (libsodium, chiave derivata dai salt di WordPress).
+
+### Limiti di prenotazione
+
+In Impostazioni: **massimo di call al giorno** (default 2, 0 = nessun limite, vale per tutti i tipi di call e usa il fuso del sito) e **una sola call prenotata per cliente** (stessa email, maiuscole ignorate). Il cliente può prenotare di nuovo quando la call è conclusa o se l'ha annullata.
+
+### Privacy
+
+Il plugin si integra con Strumenti > Esporta dati personali e Cancella dati personali. La cancellazione **anonimizza** le prenotazioni dell'email indicata (nome, email, risposte, IP, link) lasciando data e ora; le call future vengono annullate senza email e gli eventi su Google Calendar eliminati. Se è attivo un webhook, l'annullamento delle call future genera comunque l'evento `booking.cancelled`: i sistemi collegati devono occuparsi dei propri dati.
 
 ### Cache di pagina
 
