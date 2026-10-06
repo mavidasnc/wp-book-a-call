@@ -136,6 +136,13 @@ export default function Settings() {
 					onChange={ ( v ) => set( 'google_reminder_minutes' )( parseInt( v, 10 ) || 0 ) }
 				/>
 				<ToggleControl label={ __( 'Escludi gli orari già occupati nel calendario', 'wp-book-a-call' ) } checked={ s.google_use_busy } onChange={ set( 'google_use_busy' ) } />
+				<ToggleControl
+					label={ __( 'Ignora gli eventi che durano tutto il giorno', 'wp-book-a-call' ) }
+					help={ __( 'Compleanni e promemoria "tutto il giorno" non bloccano più la giornata. Vengono ignorati anche gli eventi segnati come "libero" e gli inviti rifiutati. Se la usi per le ferie, disattivala e blocca i giorni dalla scheda Eccezioni.', 'wp-book-a-call' ) }
+					checked={ s.google_ignore_allday }
+					onChange={ set( 'google_ignore_allday' ) }
+					disabled={ ! s.google_use_busy }
+				/>
 				<ToggleControl label={ __( 'Crea un evento con link Google Meet per ogni prenotazione', 'wp-book-a-call' ) } checked={ s.google_use_meet } onChange={ set( 'google_use_meet' ) } />
 				<Actions>
 					<Button variant="primary" isBusy={ connecting } disabled={ ! canConnect || connecting } onClick={ connect }>

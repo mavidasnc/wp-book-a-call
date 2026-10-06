@@ -30,6 +30,29 @@ const WEBHOOK_EXAMPLE = `{
 /** Provider di posta gratuiti: Resend non può spedire da questi domini (non si possono configurare i DNS). */
 const FREE_MAIL_DOMAINS = [ 'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com', 'icloud.com', 'libero.it' ];
 
+/** Dati completi di un test Resend (mittente, destinatari, risposta), con il pulsante per copiarli. */
+function Diagnostic( { text } ) {
+	if ( ! text ) {
+		return null;
+	}
+	const copy = () => {
+		try {
+			navigator.clipboard.writeText( text );
+		} catch ( e ) {
+			// Senza permessi per la clipboard il testo resta selezionabile a mano.
+		}
+	};
+	return (
+		<details className="wpbac-admin__guide" open>
+			<summary>{ __( 'Dati del test (mandameli per un controllo)', 'wp-book-a-call' ) }</summary>
+			<pre className="wpbac-admin__code">{ text }</pre>
+			<Button variant="secondary" onClick={ copy }>
+				{ __( 'Copia', 'wp-book-a-call' ) }
+			</Button>
+		</details>
+	);
+}
+
 /** Scheda Notifiche: email al cliente e agli amministratori, promemoria e webhook. */
 export default function Notifications() {
 	const { s, set, notice, setNotice, saving, save, run } = useSettings();
@@ -72,6 +95,7 @@ export default function Notifications() {
 			{ notice && (
 				<Notice status={ notice.status } onRemove={ () => setNotice( null ) }>
 					{ notice.text }
+					<Diagnostic text={ notice.details } />
 				</Notice>
 			) }
 
@@ -107,12 +131,13 @@ export default function Notifications() {
 							__( 'Resend non funziona e per ora è disattivato: email e promemoria usano WordPress e WP-Cron. Errore: %s', 'wp-book-a-call' ),
 							s.resend.error
 						) }
+						<Diagnostic text={ s.resend.details } />
 					</Notice>
 				) }
 				<TextControl
 					type="password"
 					label={ __( 'Chiave API di Resend', 'wp-book-a-call' ) }
-					help={ s.resend_api_key_set ? __( 'Già salvata: compila solo per sostituirla. Quando salvi, il plugin invia una email di prova.', 'wp-book-a-call' ) : __( 'Crea la chiave su resend.com. L\'email del mittente deve appartenere a un dominio verificato su Resend.', 'wp-book-a-call' ) }
+					help={ s.resend_api_key_set ? __( 'Già salvata: compila solo per sostituirla. Quando salvi, il plugin invia una email di prova. La prova usa l\'email del mittente già salvata: salva le modifiche prima di riprovare.', 'wp-book-a-call' ) : __( 'Crea la chiave su resend.com. L\'email del mittente deve appartenere a un dominio verificato su Resend.', 'wp-book-a-call' ) }
 					value={ s.resend_api_key ?? '' }
 					onChange={ set( 'resend_api_key' ) }
 				/>

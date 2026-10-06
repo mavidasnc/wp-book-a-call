@@ -94,6 +94,57 @@ final class ResendClient {
 	}
 
 	/**
+	 * Chiave API mascherata: prefisso, ultimi 4 caratteri e lunghezza (mai la chiave intera).
+	 *
+	 * @param string $key Chiave in chiaro.
+	 * @return string
+	 */
+	public static function mask_key( string $key ): string {
+		if ( '' === $key ) {
+			return '(nessuna chiave salvata)';
+		}
+		$tail = strlen( $key ) > 8 ? substr( $key, -4 ) : '';
+		return sprintf( '%s…%s (%d caratteri)', substr( $key, 0, 3 ), $tail, strlen( $key ) );
+	}
+
+	/**
+	 * Testo con tutti i dati di un invio fallito, da copiare e mandare per un controllo (funzione pura).
+	 *
+	 * @param array<string,mixed> $message Messaggio inviato (from_email, from_name, to[], subject, reply).
+	 * @param array<string,mixed> $context key_hint, from_source (field|admin), saved_from, admin_email, endpoint, http, response, site, versions, time.
+	 * @return string
+	 */
+	public static function build_diagnostic( array $message, array $context ): string {
+		$from_name  = trim( (string) ( $message['from_name'] ?? '' ) );
+		$from_email = (string) ( $message['from_email'] ?? '' );
+		$saved      = '' !== (string) ( $context['saved_from'] ?? '' ) ? (string) $context['saved_from'] : '(vuoto)';
+		$source     = 'field' === ( $context['from_source'] ?? '' )
+			? 'campo "Email del mittente" delle impostazioni'
+			: 'email di amministrazione di WordPress (il campo "Email del mittente" è vuoto o non valido)';
+		$domain     = false !== strpos( $from_email, '@' ) ? substr( strrchr( $from_email, '@' ), 1 ) : '';
+
+		$lines = array(
+			'Mittente usato nel test: ' . ( '' !== $from_name ? $from_name . ' <' . $from_email . '>' : $from_email ),
+			'Dominio del mittente: ' . ( '' !== $domain ? $domain : '(non rilevato)' ),
+			'Origine del mittente: ' . $source,
+			'Valore salvato nel campo "Email del mittente": ' . $saved,
+			'Email di amministrazione di WordPress: ' . (string) ( $context['admin_email'] ?? '' ),
+			'Destinatari: ' . implode( ', ', array_map( 'strval', (array) ( $message['to'] ?? array() ) ) ),
+		);
+		if ( ! empty( $message['reply']['email'] ) ) {
+			$lines[] = 'Reply-To: ' . $message['reply']['email'];
+		}
+		$lines[] = 'Oggetto: ' . (string) ( $message['subject'] ?? '' );
+		$lines[] = 'Chiave API: ' . (string) ( $context['key_hint'] ?? '' );
+		$lines[] = 'Chiamata: ' . (string) ( $context['endpoint'] ?? '' );
+		$lines[] = 'Risposta di Resend: HTTP ' . (int) ( $context['http'] ?? 0 ) . ' ' . (string) ( $context['response'] ?? '' );
+		$lines[] = 'Sito: ' . (string) ( $context['site'] ?? '' ) . ' (' . (string) ( $context['versions'] ?? '' ) . ')';
+		$lines[] = 'Data: ' . (string) ( $context['time'] ?? '' );
+
+		return implode( "\n", $lines );
+	}
+
+	/**
 	 * Invia (o programma) una email. In caso di errore Resend viene disattivato e l'errore registrato.
 	 *
 	 * @param array<string,mixed> $prepared     Messaggio pronto (to, subject, html, text, reply, ics, method, scheduled_at).
@@ -106,11 +157,29 @@ final class ResendClient {
 			'from_name'  => Settings::host_name(),
 		);
 
-		$result = $this->request( 'POST', '/emails', self::build_payload( $message ) );
+		$payload = self::build_payload( $message );
+		$result  = $this->request( 'POST', '/emails', $payload );
 		if ( is_wp_error( $result ) ) {
-			Logger::log( 'Resend: ' . $result->get_error_message() );
-			$this->status->record_error( $result->get_error_message(), $notify_owner );
-			return $result;
+			// Dati completi del tentativo (mittente, destinatari, risposta di Resend) per capire cosa non va.
+			$data       = (array) $result->get_error_data();
+			$diagnostic = self::build_diagnostic(
+				$message,
+				array(
+					'key_hint'    => self::mask_key( (string) Settings::get( 'resend_api_key' ) ),
+					'from_source' => Settings::from_email_source(),
+					'saved_from'  => (string) Settings::get( 'from_email' ),
+					'admin_email' => (string) get_option( 'admin_email' ),
+					'endpoint'    => 'POST ' . self::API . '/emails',
+					'http'        => (int) ( $data['http'] ?? 0 ),
+					'response'    => (string) ( $data['body'] ?? $result->get_error_message() ),
+					'site'        => home_url(),
+					'versions'    => 'plugin ' . WPBAC_VERSION . ', WordPress ' . get_bloginfo( 'version' ) . ', PHP ' . PHP_VERSION,
+					'time'        => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+				)
+			);
+			Logger::log( 'Resend: ' . $result->get_error_message() . ' | from: ' . ( $payload['from'] ?? '' ) );
+			$this->status->record_error( $result->get_error_message(), $notify_owner, $diagnostic );
+			return new \WP_Error( $result->get_error_code(), $result->get_error_message(), $data + array( 'diagnostic' => $diagnostic ) );
 		}
 		return array( 'id' => (string) ( $result['id'] ?? '' ) );
 	}
@@ -166,18 +235,31 @@ final class ResendClient {
 			)
 		);
 		if ( is_wp_error( $response ) ) {
-			return new \WP_Error( 'wpbac_resend_network', $response->get_error_message() );
+			return new \WP_Error(
+				'wpbac_resend_network',
+				$response->get_error_message(),
+				array(
+					'http' => 0,
+					'body' => $response->get_error_message(),
+				)
+			);
 		}
 
 		$code = (int) wp_remote_retrieve_response_code( $response );
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		$raw  = wp_remote_retrieve_body( $response );
+		$data = json_decode( $raw, true );
 		$data = is_array( $data ) ? $data : array();
+		// Codice HTTP e corpo grezzo restano nell'errore: servono alla diagnostica.
+		$info = array(
+			'http' => $code,
+			'body' => $raw,
+		);
 		if ( in_array( $code, array( 401, 403 ), true ) && 'restricted_api_key' === ( $data['name'] ?? '' ) ) {
-			return new \WP_Error( 'wpbac_resend_restricted', sprintf( 'Resend (HTTP %d): %s', $code, (string) ( $data['message'] ?? '' ) ) );
+			return new \WP_Error( 'wpbac_resend_restricted', sprintf( 'Resend (HTTP %d): %s', $code, (string) ( $data['message'] ?? '' ) ), $info );
 		}
 		if ( $code >= 400 ) {
-			$detail = (string) ( $data['message'] ?? wp_remote_retrieve_body( $response ) );
-			return new \WP_Error( 'wpbac_resend_api', sprintf( 'Resend (HTTP %d): %s', $code, $detail ) );
+			$detail = (string) ( $data['message'] ?? $raw );
+			return new \WP_Error( 'wpbac_resend_api', sprintf( 'Resend (HTTP %d): %s', $code, $detail ), $info );
 		}
 		return $data;
 	}

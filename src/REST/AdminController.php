@@ -529,22 +529,32 @@ final class AdminController extends RestController {
 	/**
 	 * Invia la prova attraverso Resend e la riassume per l'interfaccia.
 	 *
-	 * @return array{ok:bool,message:string,warning?:bool}
+	 * @return array{ok:bool,message:string,diagnostic?:string,warning?:bool}
 	 */
 	private function resend_test_result(): array {
 		$result = $this->emails->test_resend();
 		if ( is_wp_error( $result ) ) {
+			$data = (array) $result->get_error_data();
 			return array(
-				'ok'      => false,
-				'message' => $result->get_error_message(),
+				'ok'         => false,
+				'message'    => $result->get_error_message(),
+				// Tutti i dati del test (mittente, destinatari, risposta di Resend) da copiare per un controllo.
+				'diagnostic' => (string) ( $data['diagnostic'] ?? '' ),
 			);
 		}
 		$can_cancel = $this->resend->status()->can_cancel();
+		// Mittente e destinatari usati davvero, così si vede subito se l'indirizzo è quello atteso.
+		$used = sprintf(
+			/* translators: 1: indirizzo del mittente, 2: destinatari della prova. */
+			__( 'Mittente: %1$s. Destinatari: %2$s.', 'wp-book-a-call' ),
+			Settings::from_email(),
+			implode( ', ', Settings::recipients() )
+		);
 		return array(
 			'ok'      => true,
 			'message' => $can_cancel
-				? __( 'Resend funziona: ti ho mandato una email di prova.', 'wp-book-a-call' )
-				: __( 'Resend funziona, ma la chiave è limitata all\'invio e non può annullare i promemoria programmati: per questo i promemoria restano gestiti da WP-Cron. Per programmarli su Resend crea una chiave con accesso completo (Full access).', 'wp-book-a-call' ),
+				? __( 'Resend funziona: ti ho mandato una email di prova.', 'wp-book-a-call' ) . ' ' . $used
+				: $used . ' ' . __( 'Resend funziona, ma la chiave è limitata all\'invio e non può annullare i promemoria programmati: per questo i promemoria restano gestiti da WP-Cron. Per programmarli su Resend crea una chiave con accesso completo (Full access).', 'wp-book-a-call' ),
 			'warning' => ! $can_cancel,
 		);
 	}
@@ -552,7 +562,7 @@ final class AdminController extends RestController {
 	/**
 	 * Stato di Resend per l'interfaccia.
 	 *
-	 * @return array{active:bool,can_cancel:bool,error:string,since:int}
+	 * @return array{active:bool,can_cancel:bool,error:string,details:string,since:int}
 	 */
 	private function resend_view(): array {
 		$state = $this->resend->status()->state();
@@ -560,6 +570,7 @@ final class AdminController extends RestController {
 			'active'     => $this->resend->is_active(),
 			'can_cancel' => $this->resend->status()->can_cancel(),
 			'error'      => 'error' === $state['status'] ? ( '' !== $state['message'] ? $state['message'] : __( 'Errore sconosciuto.', 'wp-book-a-call' ) ) : '',
+			'details'    => 'error' === $state['status'] ? $state['details'] : '',
 			'since'      => $state['since'],
 		);
 	}

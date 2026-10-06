@@ -175,7 +175,8 @@ final class AvailabilityService {
 			return array();
 		}
 
-		$key = 'wpbac_busy_' . md5( $from_ts . '-' . $to_ts );
+		// La modalità di lettura entra nella chiave: cambiando l'opzione la cache non resta quella vecchia.
+		$key = 'wpbac_busy_' . md5( $from_ts . '-' . $to_ts . '-' . (int) Settings::get( 'google_ignore_allday' ) );
 		if ( ! $fresh ) {
 			$cached = get_transient( $key );
 			if ( is_array( $cached ) ) {

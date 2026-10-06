@@ -55,7 +55,7 @@ final class ResendStatus {
 	/**
 	 * Stato salvato: status ok|error, message, since (timestamp), notified (email al proprietario già inviata).
 	 *
-	 * @return array{status:string,message:string,since:int,notified:bool}
+	 * @return array{status:string,message:string,details:string,since:int,notified:bool}
 	 */
 	public function state(): array {
 		$saved = get_option( self::OPTION, array() );
@@ -63,6 +63,7 @@ final class ResendStatus {
 		return array(
 			'status'   => 'error' === ( $saved['status'] ?? '' ) ? 'error' : 'ok',
 			'message'  => (string) ( $saved['message'] ?? '' ),
+			'details'  => (string) ( $saved['details'] ?? '' ),
 			'since'    => (int) ( $saved['since'] ?? 0 ),
 			'notified' => ! empty( $saved['notified'] ),
 		);
@@ -82,15 +83,16 @@ final class ResendStatus {
 	 *
 	 * @param string $message      Descrizione dell'errore.
 	 * @param bool   $notify_owner False per le prove manuali (l'utente vede già l'esito a schermo).
+	 * @param string $details      Dati completi del tentativo (mittente, destinatari, risposta di Resend).
 	 * @return void
 	 */
-	public function record_error( string $message, bool $notify_owner = true ): void {
+	public function record_error( string $message, bool $notify_owner = true, string $details = '' ): void {
 		$state     = $this->state();
 		$new_issue = 'error' !== $state['status'];
 
 		$notified = $state['notified'];
 		if ( $notify_owner && ! $notified ) {
-			$this->email_owner( $message );
+			$this->email_owner( $message, $details );
 			$notified = true;
 		}
 
@@ -99,6 +101,7 @@ final class ResendStatus {
 			array(
 				'status'   => 'error',
 				'message'  => $message,
+				'details'  => $details,
 				'since'    => $new_issue ? time() : $state['since'],
 				'notified' => $notified,
 			),
@@ -169,12 +172,14 @@ final class ResendStatus {
 	 * Email al proprietario del sito (con il normale invio di WordPress).
 	 *
 	 * @param string $message Errore di Resend.
+	 * @param string $details Dati completi del tentativo (vuoto se non disponibili).
 	 * @return void
 	 */
-	private function email_owner( string $message ): void {
+	private function email_owner( string $message, string $details = '' ): void {
 		$site = (string) get_bloginfo( 'name' );
 		$body = "Ciao,\n\n"
 			. "l'invio delle email tramite Resend sul sito {$site} ha dato un errore:\n\n{$message}\n\n"
+			. ( '' !== $details ? "Dati del tentativo:\n{$details}\n\n" : '' )
 			. "Cosa succede ora: Resend è stato disattivato in automatico. Finché il problema non è risolto le email di conferma, spostamento e annullamento partono dal server di WordPress e i promemoria vengono gestiti da WP-Cron. Nessuna prenotazione resta senza email.\n\n"
 			. "Come risolvere: apri Book a call > Notifiche, controlla la chiave API e il dominio del mittente su resend.com e premi \"Riprova\":\n"
 			. admin_url( 'admin.php?page=' . AdminMenu::MENU_SLUG . '&tab=notifications' ) . "\n";

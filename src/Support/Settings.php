@@ -87,6 +87,7 @@ final class Settings {
 			'google_account'           => '',
 			'google_calendar_id'       => 'primary',
 			'google_use_busy'          => true,
+			'google_ignore_allday'     => true,
 			'google_use_meet'          => true,
 		);
 	}
@@ -134,6 +135,15 @@ final class Settings {
 	public static function from_email(): string {
 		$email = (string) self::get( 'from_email' );
 		return is_email( $email ) ? $email : (string) get_option( 'admin_email' );
+	}
+
+	/**
+	 * Da dove arriva il mittente effettivo: `field` (campo impostato) o `admin` (email di amministrazione).
+	 *
+	 * @return string
+	 */
+	public static function from_email_source(): string {
+		return is_email( (string) self::get( 'from_email' ) ) ? 'field' : 'admin';
 	}
 
 	/**

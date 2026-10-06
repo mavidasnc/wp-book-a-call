@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.8.1]
+
+- Correzione: gli eventi Google "tutto il giorno" (compleanni, promemoria) bloccavano l'intera giornata perché il free/busy li considera occupati. Nuova opzione "Ignora gli eventi che durano tutto il giorno" (attiva di default): vengono ignorati anche gli eventi segnati "libero", annullati o gli inviti rifiutati.
+- Resend: se la prova o un invio falliscono, l'errore mostra tutti i dati del tentativo (mittente e sua origine, valore salvato nel campo, destinatari, oggetto, chiave mascherata, chiamata e risposta HTTP di Resend, versioni) con il pulsante "Copia". Gli stessi dati restano nell'avviso in admin e nell'email al proprietario. A prova riuscita il messaggio indica mittente e destinatari usati.
+
 ## [0.8.0]
 
 - Frontend: i giorni non prenotabili hanno un colore proprio, ambra per i giorni pieni, rosso per le chiusure e viola per le festività (con il nome), più una legenda sotto il calendario. Vale anche per "Sposta" nell'admin. L'endpoint `/slots` restituisce la nuova chiave `closed`.

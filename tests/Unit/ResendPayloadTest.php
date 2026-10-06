@@ -91,6 +91,34 @@ final class ResendPayloadTest extends TestCase {
 		$this->assertStringContainsString( 'method=CANCEL', $payload['attachments'][0]['content_type'] );
 	}
 
+	public function test_key_is_masked(): void {
+		$this->assertSame( 're_…wxyz (21 caratteri)', \Mavida\BookACall\Email\ResendClient::mask_key( 're_abcdefghijklmnwxyz' ) );
+		$this->assertSame( '(nessuna chiave salvata)', \Mavida\BookACall\Email\ResendClient::mask_key( '' ) );
+	}
+
+	public function test_diagnostic_shows_sender_source_and_response(): void {
+		$text = \Mavida\BookACall\Email\ResendClient::build_diagnostic(
+			$this->message(),
+			array(
+				'key_hint'    => 're_…wxyz (20 caratteri)',
+				'from_source' => 'admin',
+				'saved_from'  => '',
+				'admin_email' => 'maurizio@mavida.com',
+				'endpoint'    => 'POST https://api.resend.com/emails',
+				'http'        => 403,
+				'response'    => '{"message":"The mavida.com domain is not verified."}',
+				'site'        => 'https://maurizio.mavida.com',
+				'versions'    => 'plugin 0.8.1',
+				'time'        => '2026-10-07 08:00:00 UTC',
+			)
+		);
+		$this->assertStringContainsString( 'Mittente usato nel test: Maurizio Pelizzone <maurizio@mavida.com>', $text );
+		$this->assertStringContainsString( 'Dominio del mittente: mavida.com', $text );
+		$this->assertStringContainsString( 'email di amministrazione di WordPress', $text );
+		$this->assertStringContainsString( 'Valore salvato nel campo "Email del mittente": (vuoto)', $text );
+		$this->assertStringContainsString( 'Risposta di Resend: HTTP 403 {"message"', $text );
+	}
+
 	public function test_scheduled_at_is_passed_through(): void {
 		$payload = \Mavida\BookACall\Email\ResendClient::build_payload( $this->message( array( 'scheduled_at' => '2026-10-07T08:00:00+00:00' ) ) );
 		$this->assertSame( '2026-10-07T08:00:00+00:00', $payload['scheduled_at'] );

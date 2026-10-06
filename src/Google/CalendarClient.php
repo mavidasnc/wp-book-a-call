@@ -60,6 +60,11 @@ final class CalendarClient {
 	 * @return array<int,array{0:int,1:int}>|\WP_Error
 	 */
 	public function busy( int $from_ts, int $to_ts ): array|\WP_Error {
+		// Gli eventi "tutto il giorno" (compleanni, promemoria) non devono bloccare la giornata: si leggono gli eventi.
+		if ( Settings::get( 'google_ignore_allday' ) ) {
+			return $this->busy_from_event_list( $from_ts, $to_ts );
+		}
+
 		$calendar = $this->calendar_id();
 		$data     = $this->request(
 			'POST',
@@ -77,6 +82,75 @@ final class CalendarClient {
 		$out = array();
 		foreach ( (array) ( $data['calendars'][ $calendar ]['busy'] ?? array() ) as $slot ) {
 			$out[] = array( (int) strtotime( $slot['start'] ), (int) strtotime( $slot['end'] ) );
+		}
+		return $out;
+	}
+
+	/**
+	 * Intervalli occupati letti dall'elenco degli eventi (paginato, con un tetto di sicurezza).
+	 *
+	 * @param int $from_ts Inizio finestra.
+	 * @param int $to_ts   Fine finestra.
+	 * @return array<int,array{0:int,1:int}>|\WP_Error
+	 */
+	private function busy_from_event_list( int $from_ts, int $to_ts ): array|\WP_Error {
+		$items = array();
+		$page  = '';
+
+		// Al massimo 4 pagine da 250 eventi: oltre, meglio uno slot in più che un sito lento.
+		for ( $i = 0; $i < 4; $i++ ) {
+			$query = array(
+				'timeMin'      => gmdate( 'c', $from_ts ),
+				'timeMax'      => gmdate( 'c', $to_ts ),
+				'singleEvents' => 'true',
+				'maxResults'   => 250,
+				'fields'       => 'nextPageToken,items(start,end,status,transparency,attendees(self,responseStatus))',
+			);
+			if ( '' !== $page ) {
+				$query['pageToken'] = $page;
+			}
+
+			$data = $this->request( 'GET', '/calendars/' . rawurlencode( $this->calendar_id() ) . '/events?' . http_build_query( $query ) );
+			if ( is_wp_error( $data ) ) {
+				return $data;
+			}
+
+			$items = array_merge( $items, (array) ( $data['items'] ?? array() ) );
+			$page  = (string) ( $data['nextPageToken'] ?? '' );
+			if ( '' === $page ) {
+				break;
+			}
+		}
+
+		return self::busy_from_events( $items );
+	}
+
+	/**
+	 * Trasforma gli eventi Google in intervalli occupati (funzione pura).
+	 * Esclusi: eventi tutto il giorno, segnati "libero", annullati o rifiutati dall'organizzatore del calendario.
+	 *
+	 * @param array<int,array<string,mixed>> $items Eventi dell'API (start, end, status, transparency, attendees).
+	 * @return array<int,array{0:int,1:int}>
+	 */
+	public static function busy_from_events( array $items ): array {
+		$out = array();
+		foreach ( $items as $event ) {
+			$start = $event['start']['dateTime'] ?? '';
+			$end   = $event['end']['dateTime'] ?? '';
+			// Gli eventi tutto il giorno hanno solo "date": nessun orario da occupare.
+			if ( '' === $start || '' === $end ) {
+				continue;
+			}
+			if ( 'cancelled' === ( $event['status'] ?? '' ) || 'transparent' === ( $event['transparency'] ?? '' ) ) {
+				continue;
+			}
+			// Invito rifiutato dall'utente del calendario: non occupa tempo.
+			foreach ( (array) ( $event['attendees'] ?? array() ) as $attendee ) {
+				if ( ! empty( $attendee['self'] ) && 'declined' === ( $attendee['responseStatus'] ?? '' ) ) {
+					continue 2;
+				}
+			}
+			$out[] = array( (int) strtotime( (string) $start ), (int) strtotime( (string) $end ) );
 		}
 		return $out;
 	}

@@ -39,6 +39,8 @@ export default function useSettings() {
 										__( 'Resend non funziona: %s. Le email useranno WordPress finché non risolvi.', 'wp-book-a-call' ),
 										data.resend_test.message
 									),
+									// Dati completi del test, da copiare per un controllo.
+									details: data.resend_test.diagnostic,
 							  }
 					);
 					return;
