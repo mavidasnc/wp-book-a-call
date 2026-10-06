@@ -100,7 +100,8 @@ final class ReminderScheduler {
 	 * @return void
 	 */
 	public function schedule( array $booking, array $event_type ): void {
-		if ( ! $this->resend->is_active() || 'confirmed' !== $booking['status'] ) {
+		// Una chiave "solo invio" non può annullare i promemoria programmati: meglio WP-Cron che email vecchie.
+		if ( ! $this->resend->is_active() || ! $this->resend->status()->can_cancel() || 'confirmed' !== $booking['status'] ) {
 			return;
 		}
 

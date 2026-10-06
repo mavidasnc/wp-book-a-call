@@ -28,6 +28,13 @@ final class ResendStatus {
 	private const OPTION = 'wpbac_resend_state';
 
 	/**
+	 * Option con l'esito della verifica "la chiave può annullare".
+	 *
+	 * @var string
+	 */
+	private const CANCEL_OPTION = 'wpbac_resend_can_cancel';
+
+	/**
 	 * Aggancia la notifica in admin.
 	 *
 	 * @return void
@@ -104,6 +111,25 @@ final class ResendStatus {
 			 */
 			do_action( 'wpbac_resend_disabled' );
 		}
+	}
+
+	/**
+	 * La chiave può annullare gli invii programmati? (sì finché non si verifica il contrario)
+	 *
+	 * @return bool
+	 */
+	public function can_cancel(): bool {
+		return '0' !== (string) get_option( self::CANCEL_OPTION, '1' );
+	}
+
+	/**
+	 * Memorizza se la chiave può annullare gli invii programmati.
+	 *
+	 * @param bool $can Esito della verifica.
+	 * @return void
+	 */
+	public function set_can_cancel( bool $can ): void {
+		update_option( self::CANCEL_OPTION, $can ? '1' : '0', false );
 	}
 
 	/**

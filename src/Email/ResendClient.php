@@ -116,6 +116,17 @@ final class ResendClient {
 	}
 
 	/**
+	 * La chiave può annullare gli invii programmati? Le chiavi "solo invio" di Resend no: si prova
+	 * ad annullare un id inesistente e si guarda se l'errore è di permessi.
+	 *
+	 * @return bool
+	 */
+	public function can_cancel(): bool {
+		$result = $this->request( 'POST', '/emails/00000000-0000-0000-0000-000000000000/cancel', array() );
+		return ! ( is_wp_error( $result ) && 'wpbac_resend_restricted' === $result->get_error_code() );
+	}
+
+	/**
 	 * Annulla un invio programmato. Gli errori non disattivano Resend (l'email potrebbe essere già partita).
 	 *
 	 * @param string $id Id restituito da send().
@@ -161,6 +172,9 @@ final class ResendClient {
 		$code = (int) wp_remote_retrieve_response_code( $response );
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
 		$data = is_array( $data ) ? $data : array();
+		if ( in_array( $code, array( 401, 403 ), true ) && 'restricted_api_key' === ( $data['name'] ?? '' ) ) {
+			return new \WP_Error( 'wpbac_resend_restricted', sprintf( 'Resend (HTTP %d): %s', $code, (string) ( $data['message'] ?? '' ) ) );
+		}
 		if ( $code >= 400 ) {
 			$detail = (string) ( $data['message'] ?? wp_remote_retrieve_body( $response ) );
 			return new \WP_Error( 'wpbac_resend_api', sprintf( 'Resend (HTTP %d): %s', $code, $detail ) );

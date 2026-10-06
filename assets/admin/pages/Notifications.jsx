@@ -45,7 +45,7 @@ export default function Notifications() {
 	// Come vengono inviati i promemoria e se il cron gira.
 	const minutesAgo = s.reminders_last_run ? Math.round( ( Date.now() / 1000 - s.reminders_last_run ) / 60 ) : null;
 	const reminderInfo = [
-		s.resend?.active
+		s.resend?.active && s.resend.can_cancel
 			? __( 'Promemoria: programmati su Resend appena arriva la prenotazione (fino a 30 giorni prima); WP-Cron resta come rete di sicurezza.', 'wp-book-a-call' )
 			: __( 'Promemoria: inviati da WP-Cron, che controlla ogni 15 minuti.', 'wp-book-a-call' ),
 		null === minutesAgo
@@ -76,6 +76,11 @@ export default function Notifications() {
 					{ __( 'Stato:', 'wp-book-a-call' ) }{ ' ' }
 					<span className={ `wpbac-admin__badge ${ resendBadge.className }` }>{ resendBadge.label }</span>
 				</p>
+				{ s.resend?.active && ! s.resend.can_cancel && (
+					<Notice status="warning" isDismissible={ false }>
+						{ __( 'La chiave è limitata all\'invio e non può annullare i promemoria programmati: i promemoria restano gestiti da WP-Cron. Per programmarli su Resend usa una chiave con accesso completo.', 'wp-book-a-call' ) }
+					</Notice>
+				) }
 				{ s.resend?.error && (
 					<Notice status="error" isDismissible={ false }>
 						{ sprintf(

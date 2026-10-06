@@ -528,7 +528,7 @@ final class AdminController extends RestController {
 	/**
 	 * Invia la prova attraverso Resend e la riassume per l'interfaccia.
 	 *
-	 * @return array{ok:bool,message:string}
+	 * @return array{ok:bool,message:string,warning?:bool}
 	 */
 	private function resend_test_result(): array {
 		$result = $this->emails->test_resend();
@@ -538,23 +538,28 @@ final class AdminController extends RestController {
 				'message' => $result->get_error_message(),
 			);
 		}
+		$can_cancel = $this->resend->status()->can_cancel();
 		return array(
 			'ok'      => true,
-			'message' => __( 'Resend funziona: ti ho mandato una email di prova.', 'wp-book-a-call' ),
+			'message' => $can_cancel
+				? __( 'Resend funziona: ti ho mandato una email di prova.', 'wp-book-a-call' )
+				: __( 'Resend funziona, ma la chiave è limitata all\'invio e non può annullare i promemoria programmati: per questo i promemoria restano gestiti da WP-Cron. Per programmarli su Resend crea una chiave con accesso completo (Full access).', 'wp-book-a-call' ),
+			'warning' => ! $can_cancel,
 		);
 	}
 
 	/**
 	 * Stato di Resend per l'interfaccia.
 	 *
-	 * @return array{active:bool,error:string,since:int}
+	 * @return array{active:bool,can_cancel:bool,error:string,since:int}
 	 */
 	private function resend_view(): array {
 		$state = $this->resend->status()->state();
 		return array(
-			'active' => $this->resend->is_active(),
-			'error'  => 'error' === $state['status'] ? ( '' !== $state['message'] ? $state['message'] : __( 'Errore sconosciuto.', 'wp-book-a-call' ) ) : '',
-			'since'  => $state['since'],
+			'active'     => $this->resend->is_active(),
+			'can_cancel' => $this->resend->status()->can_cancel(),
+			'error'      => 'error' === $state['status'] ? ( '' !== $state['message'] ? $state['message'] : __( 'Errore sconosciuto.', 'wp-book-a-call' ) ) : '',
+			'since'      => $state['since'],
 		);
 	}
 

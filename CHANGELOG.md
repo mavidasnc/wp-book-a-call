@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.7.1]
+
+- Resend: se la chiave è limitata all'invio (non può annullare i promemoria programmati) i promemoria restano su WP-Cron e l'admin lo segnala, per non mandare email vecchie dopo uno spostamento o un annullamento.
+
 ## [0.7.0]
 
 - Test su GitHub: a ogni push e pull request parte il workflow CI (phpcs, PHPStan, PHPUnit, build e controllo dei file compilati); la release dello zip parte solo se i test passano.

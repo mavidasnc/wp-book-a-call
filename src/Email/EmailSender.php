@@ -193,6 +193,7 @@ final class EmailSender {
 			return $result;
 		}
 		$this->resend->status()->clear();
+		$this->resend->status()->set_can_cancel( $this->resend->can_cancel() );
 		return true;
 	}
 

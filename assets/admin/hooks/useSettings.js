@@ -31,7 +31,7 @@ export default function useSettings() {
 				if ( data?.resend_test ) {
 					setNotice(
 						data.resend_test.ok
-							? { status: 'success', text: data.resend_test.message }
+							? { status: data.resend_test.warning ? 'warning' : 'success', text: data.resend_test.message }
 							: {
 									status: 'error',
 									text: sprintf(
