@@ -46,20 +46,35 @@ export default function Exceptions() {
 	}, [] );
 
 	// Giorni bloccati nell'ambito scelto e, per un tipo specifico, quelli ereditati dal blocco globale.
-	const { blocked, inherited, ranges } = useMemo( () => {
+	const { blocked, inherited, partial } = useMemo( () => {
 		const own = ( rows ?? [] ).filter( ( r ) => ( r.event_type_id ?? 0 ) === scope );
 		const global = scope ? ( rows ?? [] ).filter( ( r ) => null === r.event_type_id ) : [];
+
+		// Giorni chiusi solo per altri tipi di call (data => titoli), mostrati a parte nel calendario.
+		const partial = {};
+		( rows ?? [] )
+			.filter( ( r ) => null !== r.event_type_id && r.event_type_id !== scope )
+			.forEach( ( r ) => {
+				const title = types.find( ( t ) => t.id === r.event_type_id )?.title ?? '#' + r.event_type_id;
+				expand( r.date_from, r.date_to ).forEach( ( d ) => ( partial[ d ] ??= [] ).push( title ) );
+			} );
+
 		return {
 			blocked: new Set( own.flatMap( ( r ) => expand( r.date_from, r.date_to ) ) ),
 			inherited: new Set( global.flatMap( ( r ) => expand( r.date_from, r.date_to ) ) ),
-			ranges: own,
+			partial,
 		};
-	}, [ rows, scope ] );
+	}, [ rows, scope, types ] );
 
-	const toggle = ( dates, isBlocked ) =>
+	// Nome dell'ambito di un blocco: "Tutti i tipi di call" oppure il titolo del tipo.
+	const scopeLabel = ( id ) =>
+		null === id ? __( 'Tutti i tipi di call', 'wp-book-a-call' ) : types.find( ( t ) => t.id === id )?.title ?? '#' + id;
+
+	// Sblocca o blocca nell'ambito indicato (di base quello selezionato).
+	const toggle = ( dates, isBlocked, typeId = scope ) =>
 		api( '/admin/exceptions/toggle', {
 			method: 'POST',
-			data: { dates, event_type_id: scope, blocked: isBlocked },
+			data: { dates, event_type_id: typeId, blocked: isBlocked },
 		} )
 			.then( ( data ) => {
 				setRows( data );
@@ -75,7 +90,7 @@ export default function Exceptions() {
 		<div className="wpbac-admin__panel">
 			<Section
 				title={ __( 'Giorni di chiusura', 'wp-book-a-call' ) }
-				description={ __( 'Clicca su un giorno per bloccarlo o sbloccarlo: in quei giorni nessuno potrà prenotare. Con Maiusc+clic selezioni un intervallo.', 'wp-book-a-call' ) }
+				description={ __( 'Clicca su un giorno per bloccarlo o sbloccarlo: in quei giorni nessuno potrà prenotare. Con Maiusc+clic selezioni un intervallo. Di base la chiusura vale per tutti i tipi di call; scegli un tipo in "Vale per" per chiudere solo quello.', 'wp-book-a-call' ) }
 			>
 				{ error && (
 					<Notice status="error" onRemove={ () => setError( '' ) }>
@@ -94,21 +109,22 @@ export default function Exceptions() {
 						__nextHasNoMarginBottom
 					/>
 				</div>
-				<BlockCalendar blocked={ blocked } inherited={ inherited } booked={ booked } holidays={ holidays } onChange={ toggle } />
+				<BlockCalendar blocked={ blocked } inherited={ inherited } partial={ partial } booked={ booked } holidays={ holidays } onChange={ toggle } />
 			</Section>
 
 			<Section title={ __( 'Giorni bloccati', 'wp-book-a-call' ) }>
-				{ 0 === ranges.length && (
+				{ 0 === rows.length && (
 					<p className="wpbac-admin__empty">{ __( 'Nessun giorno bloccato.', 'wp-book-a-call' ) }</p>
 				) }
 				<ul className="wpbac-admin__chips">
-					{ ranges.map( ( r ) => (
+					{ rows.map( ( r ) => (
 						<li key={ r.id } className="wpbac-admin__chip">
 							{ r.date_from === r.date_to ? label( r.date_from ) : `${ label( r.date_from ) } – ${ label( r.date_to ) }` }
+							<span className="wpbac-admin__chip-scope">{ scopeLabel( r.event_type_id ) }</span>
 							<Button
 								variant="link"
 								isDestructive
-								onClick={ () => toggle( expand( r.date_from, r.date_to ), false ) }
+								onClick={ () => toggle( expand( r.date_from, r.date_to ), false, r.event_type_id ?? 0 ) }
 								aria-label={ __( 'Sblocca', 'wp-book-a-call' ) }
 							>
 								×

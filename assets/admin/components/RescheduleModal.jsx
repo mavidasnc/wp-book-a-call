@@ -19,7 +19,7 @@ export default function RescheduleModal( { booking, onClose, onDone } ) {
 	const loadSlots = ( from, to ) =>
 		api( `/admin/bookings/${ booking.id }/slots?from=${ from }&to=${ to }` ).then( ( data ) => {
 			setNotifyClient( false !== data.notify_client );
-			return { slots: data.available, taken: data.taken };
+			return { slots: data.available, taken: data.taken, closed: data.closed };
 		} );
 
 	const submit = () => {

@@ -50,7 +50,9 @@ Il refresh token è salvato cifrato (libsodium, chiave derivata dai salt di Word
 
 ### Festività e giorno successivo
 
-In Impostazioni > Limiti e chiusure: **chiusura automatica nelle festività italiane** (attiva di default) e, a scelta, **nessuna prenotazione per il primo giorno operativo successivo a oggi** (weekend e festività non contano). Gli altri giorni di chiusura si bloccano dalla scheda Eccezioni.
+In Impostazioni > Limiti e chiusure: **chiusura automatica nelle festività italiane** (attiva di default) e, a scelta, **nessuna prenotazione per il primo giorno operativo successivo a oggi** (weekend e festività non contano). Gli altri giorni di chiusura si bloccano dalla scheda Eccezioni: con "Vale per" si sceglie se la chiusura riguarda tutti i tipi di call (default) o uno solo. Il calendario mostra anche i giorni chiusi solo per altri tipi (a righe) e l'elenco indica l'ambito di ogni blocco.
+
+Nel widget i giorni non prenotabili hanno un colore proprio: **ambra** per i giorni con tutti gli orari occupati (o al limite giornaliero), **rosso** per le chiusure, **viola** per le festività (con il nome al passaggio del mouse), con una legenda sotto il calendario.
 
 ### Mittente delle email
 
@@ -92,7 +94,7 @@ Lo script aggiorna la versione (header del plugin, `WPBAC_VERSION`, `package.jso
 ## Promemoria e webhook
 
 - **Promemoria:** in Notifiche si attivano quelli a 24 ore e a 1 ora. Senza chiave Resend li invia WP-Cron (ogni 15 minuti, e parte solo quando il sito riceve visite o c'è un cron di sistema). Con una chiave Resend vengono programmati su Resend appena arriva la prenotazione (fino a 30 giorni prima) e WP-Cron fa da rete di sicurezza. Se disattivi un promemoria, quelli già programmati su Resend partono comunque.
-- **Resend:** in Notifiche > Invio email si inserisce la chiave API (il mittente deve appartenere a un dominio verificato su Resend). Al salvataggio parte una email di prova. Se Resend dà errore viene disattivato, il proprietario del sito riceve una email e le email e i promemoria passano a WordPress e WP-Cron finché non si preme "Riprova".
+- **Resend:** in Notifiche > Invio email si inserisce la chiave API (il mittente è l'"Email del mittente" impostata in Notifiche, altrimenti l'email di amministrazione di WordPress). **Resend non funziona con indirizzi gmail.com o altri provider gratuiti**: serve una email con un dominio proprio, verificato su Resend configurando i DNS (SPF, DKIM, meglio anche DMARC) per autenticare l'invio. Al salvataggio parte una email di prova. Se Resend dà errore viene disattivato, il proprietario del sito riceve una email e le email e i promemoria passano a WordPress e WP-Cron finché non si preme "Riprova".
 - **Messaggi e segnaposto:** i testi di conferma, spostamento e annullamento usano segnaposto come `{name}`, `{email}`, `{date}`, `{time}`, `{event}`, `{manage_url}` (elenco completo nella scheda Notifiche).
 - **Promemoria Google:** in Impostazioni si può impostare un promemoria sul proprio calendario (non sul cliente).
 - **Webhook:** in Impostazioni si indica l'URL (es. un nodo Webhook di n8n) e un segreto facoltativo. Eventi: `booking.created`, `booking.rescheduled`, `booking.cancelled`. Il corpo è JSON; se c'è un segreto la richiesta ha l'header `X-Wpbac-Signature: sha256=<hmac del corpo>`. L'invio non blocca la prenotazione.

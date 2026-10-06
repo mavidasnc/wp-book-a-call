@@ -5,6 +5,12 @@
 	--wpbac-border: color-mix(in srgb, currentcolor 18%, transparent);
 	--wpbac-muted: color-mix(in srgb, currentcolor 62%, transparent);
 	--wpbac-radius: 12px;
+
+	// Giorni non prenotabili: pieno (ambra), chiuso (rosso), festività (viola).
+	// Valori fissi, scelti per restare leggibili su sfondi chiari e scuri.
+	--wpbac-full: #c27803;
+	--wpbac-closed: #c0392b;
+	--wpbac-holiday: #7e57c2;
 }
 
 .wp-block-wpbac-booking {
@@ -150,22 +156,65 @@
 		}
 	}
 
-	// Giorno con orari previsti ma tutti occupati: cliccabile, aspetto "spento".
+	// Giorno con orari previsti ma tutti occupati: cliccabile, colore ambra.
 	&__day.is-full {
-		background: color-mix(in srgb, currentcolor 8%, transparent);
-		color: var(--wpbac-muted);
+		background: color-mix(in srgb, var(--wpbac-full) 16%, transparent);
+		color: var(--wpbac-full);
 		text-decoration: line-through;
 		cursor: pointer;
 
 		&:hover,
 		&:focus-visible {
-			background: color-mix(in srgb, currentcolor 14%, transparent);
+			background: color-mix(in srgb, var(--wpbac-full) 26%, transparent);
 		}
 
 		&.is-selected,
 		&.is-selected:hover {
 			background: var(--wpbac-muted);
 			color: #fff;
+		}
+	}
+
+	// Giorno chiuso o festività: non cliccabile, colorato per far capire che non è prenotabile.
+	&__day.is-closed:disabled {
+		background: color-mix(in srgb, var(--wpbac-closed) 14%, transparent);
+		color: var(--wpbac-closed);
+		cursor: not-allowed;
+	}
+
+	&__day.is-holiday:disabled {
+		background: color-mix(in srgb, var(--wpbac-holiday) 16%, transparent);
+		color: var(--wpbac-holiday);
+		cursor: not-allowed;
+	}
+
+	// Legenda dei colori sotto il calendario.
+	&__day-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 16px;
+		margin: 12px 0 0;
+		color: var(--wpbac-muted);
+		font-size: 0.8em;
+	}
+
+	&__swatch {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		margin-right: 4px;
+		border-radius: 50%;
+
+		&.is-full {
+			background: var(--wpbac-full);
+		}
+
+		&.is-closed {
+			background: var(--wpbac-closed);
+		}
+
+		&.is-holiday {
+			background: var(--wpbac-holiday);
 		}
 	}
 

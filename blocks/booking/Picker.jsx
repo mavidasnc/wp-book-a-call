@@ -16,7 +16,7 @@ function LockIcon() {
 }
 
 /** Un singolo mese: titolo con frecce, giorni della settimana e griglia dei giorni. */
-function Month( { y, m, first, canPrev, byDay, takenByDay, day, onDay, onPrev, onNext } ) {
+function Month( { y, m, first, canPrev, byDay, takenByDay, closed, day, onDay, onPrev, onNext } ) {
 	const title = new Intl.DateTimeFormat( 'it-IT', { month: 'long', year: 'numeric' } ).format(
 		new Date( y, m, 1 )
 	);
@@ -60,6 +60,14 @@ function Month( { y, m, first, canPrev, byDay, takenByDay, day, onDay, onPrev, o
 					const available = !! byDay[ key ];
 					// Giorno con orari previsti ma tutti occupati: resta cliccabile per mostrarli.
 					const full = ! available && !! takenByDay[ key ];
+					// Giorno chiuso (festività o chiusura): non prenotabile, colore a parte.
+					const shut = ! available && ! full ? closed[ key ] : undefined;
+					let title;
+					if ( full ) {
+						title = __( 'Tutto occupato', 'wp-book-a-call' );
+					} else if ( shut ) {
+						title = shut.label || __( 'Chiuso', 'wp-book-a-call' );
+					}
 					return (
 						<button
 							type="button"
@@ -68,10 +76,11 @@ function Month( { y, m, first, canPrev, byDay, takenByDay, day, onDay, onPrev, o
 								'wpbac-booking__day' +
 								( available ? ' is-available' : '' ) +
 								( full ? ' is-full' : '' ) +
+								( shut ? ( 'holiday' === shut.reason ? ' is-holiday' : ' is-closed' ) : '' ) +
 								( key === day ? ' is-selected' : '' )
 							}
 							disabled={ ! available && ! full }
-							title={ full ? __( 'Tutto occupato', 'wp-book-a-call' ) : undefined }
+							title={ title }
 							aria-pressed={ key === day }
 							onClick={ () => onDay( key ) }
 						>
@@ -98,6 +107,7 @@ export default function Picker( { apiRoot, slug, tz, onSelect, loadSlots, select
 	const [ cursor, setCursor ] = useState( { y: today.getFullYear(), m: today.getMonth() } );
 	const [ slots, setSlots ] = useState( null );
 	const [ taken, setTaken ] = useState( [] );
+	const [ closed, setClosed ] = useState( {} );
 	const [ day, setDay ] = useState( '' );
 	const [ error, setError ] = useState( '' );
 
@@ -118,6 +128,8 @@ export default function Picker( { apiRoot, slug, tz, onSelect, loadSlots, select
 			.then( ( data ) => {
 				// Orari occupati (previsti ma già impegnati): il widget li mostra non selezionabili.
 				setTaken( data.taken ?? [] );
+				// Giorni chiusi (data => motivo): colorati e non prenotabili.
+				setClosed( data.closed ?? {} );
 				setSlots( data.slots );
 			} )
 			.catch( ( e ) => setError( e.message ) );
@@ -150,7 +162,16 @@ export default function Picker( { apiRoot, slug, tz, onSelect, loadSlots, select
 	};
 
 	const canPrev = ! ( cursor.y === today.getFullYear() && cursor.m === today.getMonth() );
-	const monthProps = { byDay, takenByDay, day, onDay: setDay, onPrev: () => move( -1 ), onNext: () => move( 1 ) };
+	const monthProps = { byDay, takenByDay, closed, day, onDay: setDay, onPrev: () => move( -1 ), onNext: () => move( 1 ) };
+	// Legenda dei colori: solo i casi presenti nei due mesi visibili.
+	const visible = [ keyOf( new Date( cursor.y, cursor.m, 1 ) ).slice( 0, 7 ), keyOf( next ).slice( 0, 7 ) ];
+	const inView = ( date ) => visible.includes( date.slice( 0, 7 ) );
+	const closedInView = Object.keys( closed ).filter( inView ).filter( ( date ) => ! byDay[ date ] && ! takenByDay[ date ] );
+	const legend = [
+		Object.keys( takenByDay ).some( ( date ) => inView( date ) && ! byDay[ date ] ) && { type: 'full', label: __( 'Tutto occupato', 'wp-book-a-call' ) },
+		closedInView.some( ( date ) => 'closed' === closed[ date ].reason ) && { type: 'closed', label: __( 'Chiuso', 'wp-book-a-call' ) },
+		closedInView.some( ( date ) => 'holiday' === closed[ date ].reason ) && { type: 'holiday', label: __( 'Festività', 'wp-book-a-call' ) },
+	].filter( Boolean );
 	const hasSlots = Object.keys( byDay ).length > 0 || Object.keys( takenByDay ).length > 0;
 
 	return (
@@ -165,6 +186,15 @@ export default function Picker( { apiRoot, slug, tz, onSelect, loadSlots, select
 					<Month y={ cursor.y } m={ cursor.m } first canPrev={ canPrev } { ...monthProps } />
 					<Month y={ next.getFullYear() } m={ next.getMonth() } canPrev={ false } { ...monthProps } />
 				</div>
+				{ legend.length > 0 && (
+					<p className="wpbac-booking__day-legend">
+						{ legend.map( ( item ) => (
+							<span key={ item.type }>
+								<span className={ `wpbac-booking__swatch is-${ item.type }` } aria-hidden="true" /> { item.label }
+							</span>
+						) ) }
+					</p>
+				) }
 				{ null === slots && ! error && (
 					<p className="wpbac-booking__hint">{ __( 'Caricamento…', 'wp-book-a-call' ) }</p>
 				) }

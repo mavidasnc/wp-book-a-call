@@ -27,6 +27,9 @@ const WEBHOOK_EXAMPLE = `{
   "event_type": { "id": 1, "slug": "call-conoscitiva", "title": "Call conoscitiva", "duration_min": 30 }
 }`;
 
+/** Provider di posta gratuiti: Resend non può spedire da questi domini (non si possono configurare i DNS). */
+const FREE_MAIL_DOMAINS = [ 'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com', 'icloud.com', 'libero.it' ];
+
 /** Scheda Notifiche: email al cliente e agli amministratori, promemoria e webhook. */
 export default function Notifications() {
 	const { s, set, notice, setNotice, saving, save, run } = useSettings();
@@ -41,6 +44,10 @@ export default function Notifications() {
 		: s.resend?.active
 			? { className: 'is-confirmed', label: __( 'Attivo', 'wp-book-a-call' ) }
 			: { className: 'is-cancelled', label: __( 'In errore (email da WordPress)', 'wp-book-a-call' ) };
+
+	// Mittente effettivo (campo dedicato, altrimenti email di amministrazione) e dominio gratuito?
+	const senderEmail = s.from_email || s.admin_email || '';
+	const senderFree = FREE_MAIL_DOMAINS.includes( senderEmail.split( '@' ).pop().toLowerCase() );
 
 	// Come vengono inviati i promemoria e se il cron gira.
 	const minutesAgo = s.reminders_last_run ? Math.round( ( Date.now() / 1000 - s.reminders_last_run ) / 60 ) : null;
@@ -76,6 +83,18 @@ export default function Notifications() {
 					{ __( 'Stato:', 'wp-book-a-call' ) }{ ' ' }
 					<span className={ `wpbac-admin__badge ${ resendBadge.className }` }>{ resendBadge.label }</span>
 				</p>
+				<Notice status="info" isDismissible={ false }>
+					{ __( 'Resend non funziona con indirizzi gmail.com (né altri provider gratuiti): serve una email con un dominio proprio. Il dominio va verificato su Resend configurando i DNS (record SPF e DKIM, meglio anche DMARC) in modo da autenticare l\'invio.', 'wp-book-a-call' ) }
+				</Notice>
+				{ s.resend_api_key_set && senderFree && (
+					<Notice status="warning" isDismissible={ false }>
+						{ sprintf(
+							/* translators: %s: indirizzo del mittente. */
+							__( 'Il mittente attuale (%s) usa un dominio gratuito: Resend rifiuterà l\'invio e le email passeranno da WordPress. Imposta un\'email del tuo dominio in "Email del mittente".', 'wp-book-a-call' ),
+							senderEmail
+						) }
+					</Notice>
+				) }
 				{ s.resend?.active && ! s.resend.can_cancel && (
 					<Notice status="warning" isDismissible={ false }>
 						{ __( 'La chiave è limitata all\'invio e non può annullare i promemoria programmati: i promemoria restano gestiti da WP-Cron. Per programmarli su Resend usa una chiave con accesso completo.', 'wp-book-a-call' ) }

@@ -58,7 +58,7 @@ final class AvailabilityService {
 	 * @param int                 $to_ts      Fine (esclusa).
 	 * @param int                 $exclude_id Prenotazione da ignorare (spostamento).
 	 * @param bool                $fresh      Ignora la cache del free/busy Google.
-	 * @return array{available:int[],taken:int[]}
+	 * @return array{available:int[],taken:int[],closed:array<string,array{reason:string,label:string}>}
 	 */
 	public function slots_with_taken( array $event_type, int $from_ts, int $to_ts, int $exclude_id = 0, bool $fresh = false ): array {
 		$busy = $this->bookings->busy_intervals( $from_ts - DAY_IN_SECONDS, $to_ts + DAY_IN_SECONDS, $exclude_id );
@@ -72,13 +72,14 @@ final class AvailabilityService {
 			$counts[ $day ] = ( $counts[ $day ] ?? 0 ) + 1;
 		}
 
+		$closed    = $this->closed_days( $event_type, $from_ts, $to_ts );
 		$taken     = array();
 		$available = $this->generator->generate(
 			$event_type,
 			$from_ts,
 			$to_ts,
 			$busy,
-			$this->closed_days( $event_type, $from_ts, $to_ts ),
+			$closed,
 			time(),
 			$tz,
 			$counts,
@@ -89,7 +90,27 @@ final class AvailabilityService {
 		return array(
 			'available' => $available,
 			'taken'     => $taken,
+			'closed'    => $this->closed_map( $closed, $from_ts, $to_ts ),
 		);
+	}
+
+	/**
+	 * Giorni chiusi della finestra con il motivo (festività o chiusura), da oggi in poi.
+	 * Il widget li colora in modo diverso dai giorni senza orari.
+	 *
+	 * @param array<int,array{date_from:string,date_to:string}> $closed  Giorni chiusi di closed_days().
+	 * @param int                                               $from_ts Inizio finestra.
+	 * @param int                                               $to_ts   Fine finestra (esclusa).
+	 * @return array<string,array{reason:string,label:string}>
+	 */
+	private function closed_map( array $closed, int $from_ts, int $to_ts ): array {
+		$first    = max( wp_date( 'Y-m-d', $from_ts ), wp_date( 'Y-m-d' ) );
+		$last     = wp_date( 'Y-m-d', $to_ts - 1 );
+		$holidays = Settings::get( 'close_holidays' )
+			? ItalianHolidays::for_years( (int) substr( $first, 0, 4 ), (int) substr( $last, 0, 4 ) )
+			: array();
+
+		return ClosedDayMap::build( $first, $last, $closed, $holidays );
 	}
 
 	/**

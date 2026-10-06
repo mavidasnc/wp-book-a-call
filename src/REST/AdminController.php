@@ -324,6 +324,7 @@ final class AdminController extends RestController {
 			array(
 				'available'     => $result['available'],
 				'taken'         => $result['taken'],
+				'closed'        => $result['closed'],
 				'notify_client' => $this->client_is_notified( $booking ),
 				'start_ts'      => $booking['start_ts'],
 			)

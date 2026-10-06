@@ -456,6 +456,12 @@
 			font-weight: 600;
 		}
 
+		// Bloccato solo per altri tipi di call: bordo tratteggiato, resta modificabile.
+		&.is-partial {
+			box-shadow: inset 0 0 0 2px var(--wpbac-danger);
+			background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgba(179, 45, 46, 0.18) 4px 6px);
+		}
+
 		// Festività italiane: chiuse in automatico, non modificabili da qui.
 		&.is-holiday:disabled {
 			background: #fcf3e0;
@@ -512,6 +518,17 @@
 		&.is-holiday {
 			background: #dba617;
 		}
+
+		&.is-partial {
+			background: repeating-linear-gradient(45deg, #fff 0 2px, var(--wpbac-danger) 2px 3px);
+			box-shadow: inset 0 0 0 1px var(--wpbac-danger);
+		}
+	}
+
+	// Ambito del blocco (tipo di call) nell'elenco dei giorni bloccati.
+	&__chip-scope {
+		color: #50575e;
+		font-size: 0.85em;
 	}
 
 	&__chips {

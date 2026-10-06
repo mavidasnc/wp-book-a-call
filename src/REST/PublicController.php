@@ -138,12 +138,14 @@ final class PublicController extends RestController {
 			return new \WP_Error( 'wpbac_invalid', __( 'Intervallo non valido.', 'wp-book-a-call' ), array( 'status' => 400 ) );
 		}
 
-		// "slots" = orari liberi; "taken" = orari previsti ma già occupati (il widget li mostra non selezionabili).
+		// "slots" = orari liberi; "taken" = orari previsti ma già occupati (il widget li mostra non selezionabili);
+		// "closed" = giorni chiusi con il motivo (festività o chiusura), colorati a parte.
 		$result = $this->availability->slots_with_taken( $event_type, $from, $to );
 		return $this->respond(
 			array(
-				'slots' => $result['available'],
-				'taken' => $result['taken'],
+				'slots'  => $result['available'],
+				'taken'  => $result['taken'],
+				'closed' => $result['closed'],
 			)
 		);
 	}

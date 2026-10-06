@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.0]
+
+- Frontend: i giorni non prenotabili hanno un colore proprio, ambra per i giorni pieni, rosso per le chiusure e viola per le festività (con il nome), più una legenda sotto il calendario. Vale anche per "Sposta" nell'admin. L'endpoint `/slots` restituisce la nuova chiave `closed`.
+- Eccezioni: il calendario mostra anche i giorni chiusi solo per altri tipi di call e l'elenco "Giorni bloccati" indica l'ambito di ogni blocco (tutti i tipi di call o uno specifico), con sblocco nell'ambito giusto.
+- Notifiche: avviso che Resend non funziona con indirizzi gmail.com (o altri provider gratuiti) e che serve un dominio proprio con i DNS configurati (SPF, DKIM); segnalazione se il mittente attuale usa un dominio gratuito.
+
 ## [0.7.1]
 
 - Resend: se la chiave è limitata all'invio (non può annullare i promemoria programmati) i promemoria restano su WP-Cron e l'admin lo segnala, per non mandare email vecchie dopo uno spostamento o un annullamento.
