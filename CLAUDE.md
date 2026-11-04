@@ -31,6 +31,7 @@ Il lint JS (`wp-scripts lint-js`) non parte in questo ambiente (problema di tool
 - Ogni prenotazione occupa anche le pause del proprio tipo di call (`BookingRepository::busy_intervals`).
 - Le risposte REST del plugin devono restare fuori da qualunque cache (LiteSpeed): vedi `RestController::no_cache`.
 - Il CSS del blocco è incorporato nell'HTML: dopo un deploy va purgata la cache di pagina.
+- Ottimizzatori JS (LiteSpeed Guest Mode, ...): `BlockRegistrar::protect_view_script` mette `data-no-defer` e `data-no-optimize` su `view.js` e su tutte le sue dipendenze (`Blocks/ScriptDependencies`, pura e testata). Senza, `view.js` può partire prima di React/`wp-element` e il modulo resta vuoto (successo sul blog il 4/11/2026, risolto nella 0.8.2): la build legge le dipendenze una volta sola, quindi ritentare dopo non basta.
 - `block.json` non ha `version` di proposito: WordPress usa la data del file e il CSS si aggiorna a ogni build.
 - Con WP-CLI sul blog di produzione serve `--url=https://maurizio.mavida.com` (il `siteurl` letto da CLI è `https:///app`).
 - Gli aggiornamenti automatici passano da `Support/Updater.php` (plugin-update-checker + release asset): il repo GitHub `mavidasnc/wp-book-a-call` deve restare pubblico.
