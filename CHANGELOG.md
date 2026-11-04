@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.8.2]
+
+- Correzione: con LiteSpeed in Guest Mode (o un altro plugin che rinvia o accorpa gli script) il modulo di prenotazione restava vuoto senza errori, perché `view.js` partiva prima di React e `wp-element`. Ora il plugin marca `view.js` e tutte le sue dipendenze con `data-no-defer` e `data-no-optimize`, così restano nell'ordine di WordPress senza esclusioni da configurare nel plugin di cache.
+- Se il widget non si avvia, l'errore compare in console (`[wp-book-a-call] Modulo di prenotazione non avviato`).
+
 ## [0.8.1]
 
 - Correzione: gli eventi Google "tutto il giorno" (compleanni, promemoria) bloccavano l'intera giornata perché il free/busy li considera occupati. Nuova opzione "Ignora gli eventi che durano tutto il giorno" (attiva di default): vengono ignorati anche gli eventi segnati "libero", annullati o gli inviti rifiutati.
