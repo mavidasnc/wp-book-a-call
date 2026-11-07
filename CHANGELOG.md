@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.3]
+
+- Accessibilità: il testo secondario del calendario (durata, giorni non disponibili, legenda) e il giorno pieno selezionato avevano un contrasto di 3,12:1 su bianco (testo `#4a4f58`), sotto il 4,5:1 di WCAG AA. Il colore `--wpbac-muted` passa dal 62% all'80% del colore del testo: 4,83:1 sullo stesso testo.
+
 ## [0.8.2]
 
 - Correzione: con LiteSpeed in Guest Mode (o un altro plugin che rinvia o accorpa gli script) il modulo di prenotazione restava vuoto senza errori, perché `view.js` partiva prima di React e `wp-element`. Ora il plugin marca `view.js` e tutte le sue dipendenze con `data-no-defer` e `data-no-optimize`, così restano nell'ordine di WordPress senza esclusioni da configurare nel plugin di cache.
