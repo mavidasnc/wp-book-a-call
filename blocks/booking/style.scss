@@ -3,7 +3,10 @@
 .wpbac-modal {
 	--wpbac-accent: var(--wp--preset--color--primary, #1d4ed8);
 	--wpbac-border: color-mix(in srgb, currentcolor 18%, transparent);
-	--wpbac-muted: color-mix(in srgb, currentcolor 62%, transparent);
+	// Testo secondario (durata, giorni non disponibili, legenda) e fondo del giorno pieno selezionato. Con il 62% il colore
+	// era #8f9297 su bianco per un testo #4a4f58: 3,12:1, sotto il 4,5:1 di WCAG AA (axe: color-contrast). All'80% sullo stesso testo
+	// sono 4,83:1 (#6e7279); il minimo dipende dal colore del testo del tema (per #4a4f58 serve almeno il 78%).
+	--wpbac-muted: color-mix(in srgb, currentcolor 80%, transparent);
 	--wpbac-radius: 12px;
 
 	// Giorni non prenotabili: pieno (ambra), chiuso (rosso), festività (viola).
